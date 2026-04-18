@@ -1,0 +1,1853 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>تطبيق التصويت التفاعلي</title>
+<style>
+  :root {
+    --c-bg-main: #0a1628;
+    --c-bg-card: #142236;
+    --c-bg-input: #0f1c2e;
+    --c-bg-hover: #1a2d47;
+    --c-border: #2a4060;
+    --c-border-hover: #3d5577;
+    --c-primary: #1e5fc9;
+    --c-primary-hover: #3d7dd9;
+    --c-accent: #0ea5b5;
+    --c-accent-hover: #14b8ca;
+    --c-text-main: #e8f1ff;
+    --c-text-muted: #8ca3c4;
+    --c-text-dim: #5a7498;
+    --c-success: #10b981;
+    --c-danger: #ef4444;
+    --c-warning: #f59e0b;
+    --grad-primary: linear-gradient(135deg, #1e5fc9 0%, #0ea5b5 100%);
+    --grad-hover: linear-gradient(135deg, #3d7dd9 0%, #14b8ca 100%);
+    --grad-bg: linear-gradient(135deg, #0a1628 0%, #0f1f38 50%, #0a2035 100%);
+  }
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, html { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: var(--grad-bg);
+    min-height: 100vh;
+    direction: rtl;
+    color: var(--c-text-main);
+  }
+  
+  .container { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem; }
+  
+  /* ---------- HEADER ---------- */
+  .main-header {
+    background: var(--grad-primary);
+    border-radius: 20px;
+    padding: 2rem 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    box-shadow: 0 10px 40px -10px rgba(30, 95, 201, 0.5);
+    position: relative;
+    overflow: hidden;
+    color: white;
+  }
+  .main-header::before {
+    content: ''; position: absolute; top: -50%; right: -20%;
+    width: 200px; height: 200px; background: rgba(255,255,255,0.08); border-radius: 50%;
+  }
+  .main-header::after {
+    content: ''; position: absolute; bottom: -30%; left: -10%;
+    width: 150px; height: 150px; background: rgba(255,255,255,0.06); border-radius: 50%;
+  }
+  .main-header-label {
+    font-size: 12px; opacity: 0.85; margin-bottom: 8px;
+    letter-spacing: 1px; position: relative; z-index: 1; font-weight: 500;
+  }
+  .main-header-title {
+    font-size: 26px; font-weight: 600; margin: 0;
+    line-height: 1.4; position: relative; z-index: 1;
+  }
+  .session-code-display {
+    margin-top: 12px; padding: 8px 16px; background: rgba(255,255,255,0.15);
+    border-radius: 20px; display: inline-block; font-size: 13px;
+    font-family: 'Courier New', monospace; letter-spacing: 2px;
+    position: relative; z-index: 1;
+  }
+  .custom-logo {
+    max-width: 80px; max-height: 80px; margin: 0 auto 10px;
+    display: block; position: relative; z-index: 1;
+    border-radius: 12px; background: rgba(255,255,255,0.1); padding: 4px;
+  }
+  
+  /* ---------- CARDS ---------- */
+  .card {
+    background: var(--c-bg-card);
+    border: 1px solid var(--c-border);
+    border-radius: 18px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.3);
+  }
+  
+  /* ---------- POLL ---------- */
+  .poll-title {
+    font-size: 20px; font-weight: 600; color: var(--c-text-main);
+    margin: 0 0 1.5rem; text-align: center; line-height: 1.5;
+    padding-bottom: 1rem;
+    border-bottom: 2px dashed var(--c-border);
+  }
+  
+  .option-btn {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; background: var(--c-bg-input);
+    border: 2px solid var(--c-border);
+    border-radius: 14px; padding: 16px 18px; margin-bottom: 12px;
+    cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 500;
+    text-align: right; color: var(--c-text-main);
+    transition: all 0.2s ease; position: relative; overflow: hidden;
+  }
+  .option-btn:hover:not(:disabled) {
+    border-color: var(--c-accent);
+    background: var(--c-bg-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px -6px rgba(14, 165, 181, 0.4);
+  }
+  .option-btn:disabled { cursor: default; }
+  .option-btn .bar-fill {
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, rgba(14, 165, 181, 0.2) 0%, rgba(30, 95, 201, 0.3) 100%);
+    transform-origin: right;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 0;
+  }
+  .option-btn .opt-text, .option-btn .opt-count,
+  .option-btn .opt-hint, .option-btn .opt-left { position: relative; z-index: 1; }
+  
+  .opt-count {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; color: var(--c-accent); font-size: 14px;
+  }
+  .opt-hint { color: var(--c-accent); font-size: 13px; font-weight: 500; }
+  .percentage-badge {
+    background: var(--grad-primary);
+    color: white; padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+  }
+  
+  /* ---------- MULTI SELECT ---------- */
+  .multi-checkbox {
+    width: 22px; height: 22px; border-radius: 6px;
+    border: 2px solid var(--c-border-hover); flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 0.2s; background: var(--c-bg-main); margin-left: 4px;
+  }
+  .option-btn.checked .multi-checkbox {
+    background: var(--grad-primary);
+    border-color: transparent;
+  }
+  .option-btn.checked .multi-checkbox::after {
+    content: '✓'; color: #fff; font-size: 14px; font-weight: 700; line-height: 1;
+  }
+  .option-btn.checked {
+    border-color: var(--c-accent);
+    background: var(--c-bg-hover);
+  }
+  .opt-left { display: flex; align-items: center; gap: 10px; }
+  
+  .submit-multi-btn {
+    background: var(--grad-primary);
+    color: #ffffff; border: none; padding: 14px 24px;
+    border-radius: 14px; cursor: pointer; font-family: inherit;
+    font-size: 15px; font-weight: 600; width: 100%; margin-top: 8px;
+    transition: all 0.2s; box-shadow: 0 4px 14px rgba(30, 95, 201, 0.4);
+  }
+  .submit-multi-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(30, 95, 201, 0.5);
+    background: var(--grad-hover);
+  }
+  .submit-multi-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  
+  .selection-counter {
+    text-align: center; font-size: 13px; color: var(--c-accent);
+    font-weight: 500; margin-bottom: 8px; padding: 6px 12px;
+    background: var(--c-bg-input); border-radius: 8px;
+    display: inline-block; width: 100%;
+    border: 1px solid var(--c-border);
+  }
+  
+  .type-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; padding: 3px 10px; border-radius: 20px;
+    background: var(--c-bg-input); color: var(--c-accent);
+    font-weight: 600; margin-bottom: 8px;
+    border: 1px solid var(--c-border);
+  }
+  
+  /* ---------- STATS & RESULTS ---------- */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px; margin: 1rem 0 1.5rem;
+  }
+  .metric {
+    background: var(--c-bg-input);
+    border: 1px solid var(--c-border);
+    border-radius: 14px; padding: 14px 16px;
+  }
+  .metric-label {
+    font-size: 12px; color: var(--c-accent); margin-bottom: 6px;
+    font-weight: 600; letter-spacing: 0.3px;
+  }
+  .metric-value { font-size: 24px; font-weight: 700; color: var(--c-text-main); }
+  
+  .result-bar-container { margin-bottom: 14px; }
+  .result-bar-label {
+    display: flex; justify-content: space-between;
+    margin-bottom: 6px; font-size: 14px; align-items: center;
+  }
+  .result-bar-name { font-weight: 500; color: var(--c-text-main); }
+  .result-bar-stats { color: var(--c-accent); font-weight: 600; font-size: 13px; }
+  .result-bar-track {
+    height: 10px; background: var(--c-bg-input); border-radius: 20px;
+    overflow: hidden; position: relative;
+    border: 1px solid var(--c-border);
+  }
+  .result-bar-fill {
+    height: 100%;
+    background: var(--grad-primary);
+    border-radius: 20px;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 10px rgba(14, 165, 181, 0.5);
+  }
+  
+  /* ---------- INPUTS ---------- */
+  .input-field {
+    width: 100%; font-family: inherit; font-size: 15px;
+    padding: 12px 14px; border: 2px solid var(--c-border);
+    border-radius: 12px; background: var(--c-bg-input); color: var(--c-text-main);
+    margin-bottom: 10px; text-align: right; direction: rtl;
+    transition: all 0.2s;
+  }
+  .input-field::placeholder { color: var(--c-text-dim); }
+  .input-field:focus {
+    outline: none; border-color: var(--c-accent); 
+    background: var(--c-bg-main);
+    box-shadow: 0 0 0 4px rgba(14, 165, 181, 0.15);
+  }
+  .field-label {
+    display: block; font-size: 13px; color: var(--c-accent);
+    margin-bottom: 8px; font-weight: 600;
+  }
+  
+  .option-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .option-row .input-field { margin-bottom: 0; flex: 1; }
+  
+  .icon-btn {
+    background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3);
+    border-radius: 12px; width: 42px; height: 42px;
+    cursor: pointer; color: var(--c-danger);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0; transition: all 0.15s; font-weight: 300;
+  }
+  .icon-btn:hover {
+    background: var(--c-danger); color: #ffffff;
+    border-color: var(--c-danger); transform: scale(1.05);
+  }
+  
+  /* ---------- VOTE TYPE SELECTOR ---------- */
+  .vote-type-selector {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 10px;
+  }
+  .vote-type-option {
+    position: relative; padding: 14px; background: var(--c-bg-input);
+    border: 2px solid var(--c-border); border-radius: 12px;
+    cursor: pointer; transition: all 0.2s; text-align: center;
+  }
+  .vote-type-option:hover { border-color: var(--c-border-hover); background: var(--c-bg-hover); }
+  .vote-type-option.selected {
+    border-color: var(--c-accent);
+    background: var(--c-bg-hover);
+    box-shadow: 0 0 0 4px rgba(14, 165, 181, 0.1);
+  }
+  .vote-type-title {
+    font-size: 14px; font-weight: 600; color: var(--c-text-main);
+    margin-bottom: 4px; display: flex; align-items: center;
+    justify-content: center; gap: 6px;
+  }
+  .vote-type-option.selected .vote-type-title { color: var(--c-accent); }
+  .vote-type-desc { font-size: 12px; color: var(--c-text-muted); line-height: 1.4; }
+  .check-circle {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--c-border-hover); display: inline-flex;
+    align-items: center; justify-content: center; transition: all 0.2s;
+  }
+  .vote-type-option.selected .check-circle { border-color: var(--c-accent); background: var(--c-accent); }
+  .vote-type-option.selected .check-circle::after {
+    content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff;
+  }
+  
+  /* ---------- BUTTONS ---------- */
+  .primary-btn {
+    background: var(--grad-primary);
+    color: #ffffff; border: none; padding: 12px 24px;
+    border-radius: 12px; cursor: pointer; font-family: inherit;
+    font-size: 14px; font-weight: 600; transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(30, 95, 201, 0.4);
+  }
+  .primary-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(30, 95, 201, 0.5);
+    background: var(--grad-hover);
+  }
+  .secondary-btn {
+    background: var(--c-bg-input); color: var(--c-accent);
+    border: 2px solid var(--c-border); padding: 12px 24px;
+    border-radius: 12px; cursor: pointer; font-family: inherit;
+    font-size: 14px; font-weight: 600; width: 100%;
+    margin-top: 8px; transition: all 0.15s;
+  }
+  .secondary-btn:hover { background: var(--c-bg-hover); border-color: var(--c-accent); }
+  .danger-btn {
+    background: rgba(239, 68, 68, 0.1); color: var(--c-danger);
+    border: 2px solid rgba(239, 68, 68, 0.3); padding: 12px 24px;
+    border-radius: 12px; cursor: pointer; font-family: inherit;
+    font-size: 14px; font-weight: 600; transition: all 0.15s;
+  }
+  .danger-btn:hover { background: rgba(239, 68, 68, 0.2); border-color: var(--c-danger); }
+  
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.25rem; }
+  
+  /* ---------- EXPORT BUTTONS ---------- */
+  .export-section {
+    margin-top: 1.25rem; padding-top: 1.25rem;
+    border-top: 2px dashed var(--c-border);
+  }
+  .export-title {
+    font-size: 13px; color: var(--c-accent);
+    margin-bottom: 10px; font-weight: 600;
+  }
+  .export-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .export-btn {
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px; padding: 12px 16px; border-radius: 12px;
+    cursor: pointer; font-family: inherit; font-size: 14px;
+    font-weight: 600; transition: all 0.2s;
+    border: 2px solid transparent;
+  }
+  .export-btn-pdf {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ff6b6b; border-color: rgba(239, 68, 68, 0.3);
+  }
+  .export-btn-pdf:hover {
+    background: var(--c-danger);
+    color: #ffffff; transform: translateY(-1px);
+  }
+  .export-btn-excel {
+    background: rgba(16, 185, 129, 0.1);
+    color: #34d399; border-color: rgba(16, 185, 129, 0.3);
+  }
+  .export-btn-excel:hover {
+    background: var(--c-success);
+    color: #ffffff; transform: translateY(-1px);
+  }
+  
+  /* ---------- LOGIN ---------- */
+  .login-card {
+    background: var(--c-bg-card); border-radius: 20px;
+    padding: 2.5rem 2rem; max-width: 420px; margin: 3rem auto;
+    box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--c-border);
+  }
+  .login-icon {
+    width: 64px; height: 64px; margin: 0 auto 1rem;
+    background: var(--grad-primary);
+    border-radius: 20px; display: flex; align-items: center;
+    justify-content: center; color: white; font-size: 28px;
+    box-shadow: 0 8px 24px rgba(30, 95, 201, 0.4);
+  }
+  .login-title {
+    text-align: center; font-size: 20px; font-weight: 600;
+    margin-bottom: 0.5rem; color: var(--c-text-main);
+  }
+  .login-subtitle {
+    text-align: center; font-size: 13px; color: var(--c-text-muted);
+    margin-bottom: 1.75rem;
+  }
+  
+  /* ---------- QR SECTION ---------- */
+  .qr-display {
+    text-align: center; padding: 1.5rem;
+    background: var(--c-bg-input);
+    border: 2px dashed var(--c-border-hover); border-radius: 16px;
+    margin-bottom: 1rem;
+  }
+  .qr-code-wrap {
+    background: white; display: inline-block;
+    padding: 12px; border-radius: 12px; margin: 12px auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  .qr-code-wrap img, .qr-code-wrap canvas { display: block; }
+  .qr-link {
+    background: var(--c-bg-main); padding: 10px 16px; border-radius: 10px;
+    font-family: 'Courier New', monospace; font-size: 13px;
+    color: var(--c-accent); word-break: break-all; margin-top: 12px;
+    border: 1px solid var(--c-border);
+  }
+  .copy-btn {
+    background: var(--c-primary); color: white; border: none;
+    padding: 8px 16px; border-radius: 8px; cursor: pointer;
+    font-size: 13px; font-weight: 600; margin-top: 10px;
+    font-family: inherit;
+  }
+  .copy-btn:hover { background: var(--c-primary-hover); }
+  .projection-btn {
+    display: inline-block; background: var(--c-bg-card);
+    color: var(--c-accent); border: 2px solid var(--c-border-hover);
+    padding: 8px 16px; border-radius: 8px; font-size: 13px;
+    font-weight: 600; margin-top: 10px; margin-right: 8px;
+    text-decoration: none;
+  }
+  .projection-btn:hover { background: var(--c-bg-hover); border-color: var(--c-accent); }
+  
+  /* ---------- TABS ---------- */
+  .view-toggle {
+    display: flex; gap: 8px; margin-bottom: 1.5rem;
+    background: var(--c-bg-card); padding: 6px;
+    border-radius: 14px; border: 1px solid var(--c-border);
+  }
+  .tab-btn {
+    flex: 1; background: transparent; border: none;
+    padding: 10px 16px; border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 500;
+    color: var(--c-text-muted); transition: all 0.25s ease;
+  }
+  .tab-btn:hover:not(.active) { color: var(--c-accent); background: var(--c-bg-hover); }
+  .tab-btn.active {
+    background: var(--grad-primary);
+    color: #ffffff; box-shadow: 0 4px 12px rgba(30, 95, 201, 0.4);
+  }
+  
+  /* ---------- MISC ---------- */
+  .admin-section-title {
+    font-size: 16px; font-weight: 600;
+    margin: 0 0 1.25rem; padding-bottom: 10px;
+    border-bottom: 2px dashed var(--c-border);
+    color: var(--c-text-main); display: flex; align-items: center; gap: 8px;
+  }
+  .admin-section-title::before {
+    content: ''; width: 4px; height: 20px;
+    background: var(--grad-primary);
+    border-radius: 2px;
+  }
+  .live-indicator {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #ffffff;
+    background: linear-gradient(135deg, var(--c-success) 0%, #059669 100%);
+    padding: 5px 12px; border-radius: 20px; font-weight: 600;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  }
+  .live-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #ffffff; animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+  .admin-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 1rem;
+  }
+  .admin-header .admin-section-title { margin: 0; padding: 0; border: none; }
+  
+  .total-count-badge {
+    text-align: center; margin-top: 1.25rem; padding: 10px;
+    background: var(--c-bg-input);
+    border-radius: 12px; color: var(--c-accent);
+    font-size: 13px; font-weight: 600;
+    border: 1px solid var(--c-border);
+  }
+  .tip-note {
+    font-size: 12px; color: var(--c-text-muted); margin-top: 14px;
+    padding: 10px 12px; background: var(--c-bg-input);
+    border-radius: 10px; border-right: 3px solid var(--c-accent);
+    line-height: 1.6;
+  }
+  .empty-state {
+    text-align: center; padding: 2rem 1rem;
+    color: var(--c-text-dim); font-size: 14px;
+  }
+  .loading {
+    text-align: center; padding: 2rem;
+    color: var(--c-accent); font-size: 14px; font-weight: 500;
+  }
+  .status-msg {
+    padding: 12px 16px; border-radius: 12px;
+    font-size: 14px; margin-bottom: 1rem; text-align: center;
+    font-weight: 500; display: flex; align-items: center;
+    justify-content: center; gap: 8px;
+  }
+  .status-success {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  .status-error {
+    background: rgba(239, 68, 68, 0.15); color: #ff6b6b; 
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+  .floating-toast {
+    position: fixed; top: 24px; left: 50%;
+    transform: translateX(-50%); z-index: 1000;
+    animation: slideDown 0.3s ease;
+    background: var(--c-bg-card) !important;
+    border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  }
+  @keyframes slideDown {
+    from { transform: translate(-50%, -30px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+  }
+  
+  /* ---------- CONNECTION STATUS ---------- */
+  .conn-status {
+    position: fixed; bottom: 16px; left: 16px;
+    padding: 6px 12px; border-radius: 20px; font-size: 11px;
+    font-weight: 600; z-index: 100; display: flex;
+    align-items: center; gap: 6px;
+  }
+  .conn-status.online { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+  .conn-status.offline { background: rgba(239, 68, 68, 0.15); color: #ff6b6b; border: 1px solid rgba(239, 68, 68, 0.3); }
+  
+  /* ---------- FOOTER ---------- */
+  .app-footer {
+    text-align: center; padding: 1.5rem 0 0.5rem;
+    font-size: 12px; color: var(--c-text-dim);
+  }
+  .app-footer a { color: var(--c-accent); text-decoration: none; }
+  
+  /* ---------- PROJECTION SCREEN ---------- */
+  .projection-screen {
+    min-height: 100vh; padding: 2rem;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .projection-title {
+    font-size: 36px; font-weight: 700; text-align: center;
+    margin-bottom: 2rem; color: var(--c-text-main);
+  }
+  .projection-qr {
+    text-align: center; padding: 2rem;
+    background: var(--c-bg-card); border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    max-width: 500px; margin: 0 auto;
+    border: 1px solid var(--c-border);
+  }
+  .projection-qr img, .projection-qr canvas {
+    width: 300px; height: 300px; max-width: 100%;
+  }
+  .projection-instructions {
+    font-size: 20px; text-align: center;
+    margin-top: 1.5rem; color: var(--c-accent);
+  }
+  
+  /* ---------- SETTINGS (NEW!) ---------- */
+  .settings-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; padding: 10px 0; user-select: none;
+  }
+  .settings-section-header:hover .admin-section-title { color: var(--c-accent); }
+  .toggle-icon {
+    font-size: 20px; color: var(--c-text-muted);
+    transition: transform 0.2s;
+  }
+  .settings-section-header.open .toggle-icon { transform: rotate(180deg); }
+  .settings-content { display: none; margin-top: 1rem; }
+  .settings-content.open { display: block; }
+  
+  .color-preset-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 10px; margin-bottom: 12px;
+  }
+  .color-preset {
+    padding: 12px; border-radius: 12px; cursor: pointer;
+    border: 2px solid var(--c-border); transition: all 0.2s;
+    background: var(--c-bg-input);
+  }
+  .color-preset:hover { border-color: var(--c-border-hover); }
+  .color-preset.selected { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(14, 165, 181, 0.15); }
+  .color-preset-swatch {
+    display: flex; gap: 4px; margin-bottom: 8px; height: 24px;
+    border-radius: 6px; overflow: hidden;
+  }
+  .color-preset-swatch > div { flex: 1; }
+  .color-preset-name { font-size: 12px; font-weight: 600; color: var(--c-text-main); }
+  .color-preset-desc { font-size: 11px; color: var(--c-text-muted); margin-top: 2px; }
+  
+  .color-picker-row {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;
+  }
+  .color-picker-item {
+    padding: 10px; background: var(--c-bg-input);
+    border: 1px solid var(--c-border); border-radius: 10px;
+  }
+  .color-picker-item label {
+    display: block; font-size: 12px; color: var(--c-text-muted); margin-bottom: 6px;
+  }
+  .color-picker-item input[type="color"] {
+    width: 100%; height: 40px; border: none; border-radius: 6px;
+    cursor: pointer; background: transparent;
+  }
+  
+  .logo-upload {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px; background: var(--c-bg-input);
+    border: 2px dashed var(--c-border); border-radius: 12px;
+  }
+  .logo-preview {
+    width: 50px; height: 50px; border-radius: 8px;
+    background: var(--c-bg-main); display: flex;
+    align-items: center; justify-content: center;
+    color: var(--c-text-dim); font-size: 20px;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .logo-preview img { width: 100%; height: 100%; object-fit: contain; }
+  .logo-upload-label {
+    flex: 1; cursor: pointer; padding: 8px 12px;
+    background: var(--c-primary); color: white;
+    border-radius: 8px; text-align: center; font-size: 13px;
+    font-weight: 600;
+  }
+  .logo-upload-label:hover { background: var(--c-primary-hover); }
+  .logo-upload input[type="file"] { display: none; }
+  .logo-remove-btn {
+    background: transparent; border: 1px solid var(--c-danger);
+    color: var(--c-danger); padding: 6px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 11px; font-family: inherit;
+  }
+  
+  @media (max-width: 480px) {
+    .main-header-title { font-size: 22px; }
+    .container { padding: 1rem 0.75rem; }
+    .card { padding: 1.25rem; }
+    .color-preset-grid, .color-picker-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<div id="root">
+  <div class="container"><div class="loading">جاري التحميل...</div></div>
+</div>
+
+<div id="conn-status" class="conn-status offline">
+  <span class="live-dot" style="background: currentColor;"></span>
+  <span>متصل</span>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// 🔧 CONFIGURATION
+// ═══════════════════════════════════════════════════════════════
+
+const DEFAULT_PASSWORD = "Khalid@Vote2026!"; // كلمة المرور الافتراضية
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBUmpBONRyZtDavQQ8gjjDbU17-BaPgB9c",
+  authDomain: "training-voting.firebaseapp.com",
+  databaseURL: "https://training-voting-default-rtdb.firebaseio.com",
+  projectId: "training-voting",
+  storageBucket: "training-voting.firebasestorage.app",
+  messagingSenderId: "21567925569",
+  appId: "1:21567925569:web:0d050489c2106a6c9445c0"
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Color Presets
+// ═══════════════════════════════════════════════════════════════
+const COLOR_PRESETS = {
+  'royal-teal': {
+    name: 'أزرق ملكي + فيروزي',
+    desc: 'رسمي وأنيق',
+    primary: '#1e5fc9',
+    accent: '#0ea5b5',
+    mode: 'dark'
+  },
+  'navy-gold': {
+    name: 'أزرق بحري + ذهبي',
+    desc: 'فاخر ومميز',
+    primary: '#1e3a8a',
+    accent: '#d4a017',
+    mode: 'dark'
+  },
+  'emerald': {
+    name: 'أخضر زمردي',
+    desc: 'هادئ ومحايد',
+    primary: '#047857',
+    accent: '#10b981',
+    mode: 'dark'
+  },
+  'modern-orange': {
+    name: 'رمادي + برتقالي',
+    desc: 'عصري وحيوي',
+    primary: '#4b5563',
+    accent: '#f97316',
+    mode: 'dark'
+  },
+  'purple-pink': {
+    name: 'بنفسجي + وردي',
+    desc: 'عصري وجذاب',
+    primary: '#7c3aed',
+    accent: '#ec4899',
+    mode: 'light'
+  },
+  'sky-blue': {
+    name: 'سماوي فاتح',
+    desc: 'هادئ ومشرق',
+    primary: '#0284c7',
+    accent: '#0ea5e9',
+    mode: 'light'
+  }
+};
+
+// Apply colors dynamically
+function applyColors(preset, customPrimary, customAccent) {
+  const root = document.documentElement;
+  const mode = preset?.mode || 'dark';
+  const primary = customPrimary || preset?.primary || '#1e5fc9';
+  const accent = customAccent || preset?.accent || '#0ea5b5';
+  
+  if (mode === 'light') {
+    root.style.setProperty('--c-bg-main', '#f5f7fa');
+    root.style.setProperty('--c-bg-card', '#ffffff');
+    root.style.setProperty('--c-bg-input', '#f8fafc');
+    root.style.setProperty('--c-bg-hover', '#f1f5f9');
+    root.style.setProperty('--c-border', '#e2e8f0');
+    root.style.setProperty('--c-border-hover', '#cbd5e1');
+    root.style.setProperty('--c-text-main', '#0f172a');
+    root.style.setProperty('--c-text-muted', '#64748b');
+    root.style.setProperty('--c-text-dim', '#94a3b8');
+    root.style.setProperty('--grad-bg', `linear-gradient(135deg, #f5f7fa 0%, #e8f0fb 50%, #f0f4fa 100%)`);
+  } else {
+    root.style.setProperty('--c-bg-main', '#0a1628');
+    root.style.setProperty('--c-bg-card', '#142236');
+    root.style.setProperty('--c-bg-input', '#0f1c2e');
+    root.style.setProperty('--c-bg-hover', '#1a2d47');
+    root.style.setProperty('--c-border', '#2a4060');
+    root.style.setProperty('--c-border-hover', '#3d5577');
+    root.style.setProperty('--c-text-main', '#e8f1ff');
+    root.style.setProperty('--c-text-muted', '#8ca3c4');
+    root.style.setProperty('--c-text-dim', '#5a7498');
+    root.style.setProperty('--grad-bg', `linear-gradient(135deg, #0a1628 0%, #0f1f38 50%, #0a2035 100%)`);
+  }
+  
+  root.style.setProperty('--c-primary', primary);
+  root.style.setProperty('--c-accent', accent);
+  root.style.setProperty('--grad-primary', `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)`);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Initialize Firebase
+// ═══════════════════════════════════════════════════════════════
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+db.ref('.info/connected').on('value', (snap) => {
+  const el = document.getElementById('conn-status');
+  if (snap.val() === true) {
+    el.className = 'conn-status online';
+    el.querySelector('span:last-child').textContent = 'متصل';
+  } else {
+    el.className = 'conn-status offline';
+    el.querySelector('span:last-child').textContent = 'غير متصل';
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Utilities
+// ═══════════════════════════════════════════════════════════════
+function generateCode(len = 5) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < len; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+function getUrlParams() {
+  const p = new URLSearchParams(window.location.search);
+  return { session: p.get('s'), view: p.get('v'), admin: p.get('admin') === '1' };
+}
+
+function buildUrl(params = {}) {
+  const url = new URL(window.location.href);
+  url.search = '';
+  Object.keys(params).forEach(k => {
+    if (params[k] != null) url.searchParams.set(k, params[k]);
+  });
+  return url.toString();
+}
+
+function getOrCreateDeviceId() {
+  let id = localStorage.getItem('device-id');
+  if (!id) {
+    id = 'd_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem('device-id', id);
+  }
+  return id;
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'floating-toast status-msg status-' + type;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function getFormattedDate() {
+  const n = new Date();
+  const dd = String(n.getDate()).padStart(2, '0');
+  const mm = String(n.getMonth() + 1).padStart(2, '0');
+  const yyyy = n.getFullYear();
+  const hh = String(n.getHours()).padStart(2, '0');
+  const min = String(n.getMinutes()).padStart(2, '0');
+  return { full: `${dd}/${mm}/${yyyy} - ${hh}:${min}`, file: `${yyyy}-${mm}-${dd}_${hh}${min}` };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// App State
+// ═══════════════════════════════════════════════════════════════
+const state = {
+  sessionCode: null,
+  pollData: null,
+  settings: null,
+  userHasVoted: false,
+  selectedOptions: new Set(),
+  isAdmin: false,
+  view: 'vote',
+  unsubscribe: null,
+  settingsUnsubscribe: null
+};
+
+const deviceId = getOrCreateDeviceId();
+
+// ═══════════════════════════════════════════════════════════════
+// Settings operations (global settings)
+// ═══════════════════════════════════════════════════════════════
+async function loadSettings() {
+  try {
+    const snap = await db.ref('appSettings').once('value');
+    const s = snap.val() || {};
+    state.settings = {
+      appName: s.appName || 'تطبيق التصويت التفاعلي',
+      trainerName: s.trainerName || '',
+      adminPassword: s.adminPassword || DEFAULT_PASSWORD,
+      colorPreset: s.colorPreset || 'royal-teal',
+      customPrimary: s.customPrimary || '',
+      customAccent: s.customAccent || '',
+      useCustomColors: s.useCustomColors || false,
+      logoUrl: s.logoUrl || '',
+      defaultHeader: s.defaultHeader || 'استطلاع رأي',
+      defaultQuestion: s.defaultQuestion || 'ما هو سؤال التصويت؟',
+      voterHint: s.voterHint || 'اضغط للتصويت ←',
+      submitButtonText: s.submitButtonText || 'تأكيد التصويت',
+      thankYouMessage: s.thankYouMessage || 'شكراً لك! تم تسجيل صوتك'
+    };
+  } catch (e) {
+    console.error('Settings load error:', e);
+    state.settings = { 
+      appName: 'تطبيق التصويت التفاعلي',
+      trainerName: '',
+      adminPassword: DEFAULT_PASSWORD,
+      colorPreset: 'royal-teal',
+      useCustomColors: false,
+      logoUrl: '',
+      defaultHeader: 'استطلاع رأي',
+      defaultQuestion: 'ما هو سؤال التصويت؟',
+      voterHint: 'اضغط للتصويت ←',
+      submitButtonText: 'تأكيد التصويت',
+      thankYouMessage: 'شكراً لك! تم تسجيل صوتك'
+    };
+  }
+  
+  // Apply current settings
+  document.title = state.settings.appName;
+  if (state.settings.useCustomColors && state.settings.customPrimary) {
+    applyColors({ mode: 'dark' }, state.settings.customPrimary, state.settings.customAccent);
+  } else {
+    applyColors(COLOR_PRESETS[state.settings.colorPreset] || COLOR_PRESETS['royal-teal']);
+  }
+}
+
+async function saveSettings(updates) {
+  try {
+    await db.ref('appSettings').update(updates);
+    Object.assign(state.settings, updates);
+    return true;
+  } catch (e) {
+    console.error('Settings save error:', e);
+    return false;
+  }
+}
+
+function listenToSettings() {
+  if (state.settingsUnsubscribe) state.settingsUnsubscribe();
+  const ref = db.ref('appSettings');
+  const handler = (snap) => {
+    const s = snap.val() || {};
+    if (s && Object.keys(s).length) {
+      state.settings = { ...state.settings, ...s };
+      document.title = state.settings.appName;
+      if (state.settings.useCustomColors && state.settings.customPrimary) {
+        applyColors({ mode: 'dark' }, state.settings.customPrimary, state.settings.customAccent);
+      } else {
+        applyColors(COLOR_PRESETS[state.settings.colorPreset] || COLOR_PRESETS['royal-teal']);
+      }
+    }
+  };
+  ref.on('value', handler);
+  state.settingsUnsubscribe = () => ref.off('value', handler);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Firebase poll operations
+// ═══════════════════════════════════════════════════════════════
+async function createNewPoll() {
+  const code = generateCode();
+  const newPoll = {
+    headerTitle: state.settings.defaultHeader,
+    title: state.settings.defaultQuestion,
+    voteType: 'single',
+    options: [
+      { id: 'o1', text: 'الخيار الأول', votes: 0 },
+      { id: 'o2', text: 'الخيار الثاني', votes: 0 }
+    ],
+    totalVotes: 0,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    voters: {}
+  };
+  await db.ref('polls/' + code).set(newPoll);
+  return code;
+}
+
+async function loadPoll(code) {
+  const snap = await db.ref('polls/' + code).once('value');
+  return snap.val();
+}
+
+function listenToPoll(code, callback) {
+  const ref = db.ref('polls/' + code);
+  const handler = (snap) => callback(snap.val());
+  ref.on('value', handler);
+  return () => ref.off('value', handler);
+}
+
+async function checkIfVoted(code) {
+  const snap = await db.ref(`polls/${code}/voters/${deviceId}`).once('value');
+  return snap.exists();
+}
+
+async function submitVote(code, optionIds) {
+  const pollSnap = await db.ref('polls/' + code).once('value');
+  const poll = pollSnap.val();
+  if (!poll) throw new Error('التصويت غير موجود');
+  if (poll.voters && poll.voters[deviceId]) {
+    throw new Error('لقد صوّت بالفعل من هذا الجهاز');
+  }
+  poll.options = poll.options.map(o => {
+    if (optionIds.includes(o.id)) return { ...o, votes: (o.votes || 0) + 1 };
+    return o;
+  });
+  poll.totalVotes = (poll.totalVotes || 0) + 1;
+  poll.voters = poll.voters || {};
+  poll.voters[deviceId] = { voted: optionIds, at: Date.now() };
+  await db.ref('polls/' + code).set(poll);
+}
+
+async function updatePoll(code, data) {
+  data.updatedAt = Date.now();
+  await db.ref('polls/' + code).update(data);
+}
+
+async function resetVotes(code) {
+  const snap = await db.ref('polls/' + code).once('value');
+  const poll = snap.val();
+  if (!poll) return;
+  poll.options = poll.options.map(o => ({ ...o, votes: 0 }));
+  poll.totalVotes = 0;
+  poll.voters = {};
+  poll.updatedAt = Date.now();
+  await db.ref('polls/' + code).set(poll);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Router
+// ═══════════════════════════════════════════════════════════════
+async function route() {
+  const params = getUrlParams();
+  
+  if (params.view === 'projection' && params.session) {
+    renderProjection(params.session);
+    return;
+  }
+  
+  if (params.session && !params.admin) {
+    state.sessionCode = params.session;
+    state.userHasVoted = await checkIfVoted(params.session);
+    state.view = 'vote';
+    listenPoll();
+    return;
+  }
+  
+  if (params.admin || !params.session) {
+    if (!state.isAdmin) {
+      renderLogin();
+      return;
+    }
+    if (!params.session) {
+      renderCreateOrJoin();
+      return;
+    }
+    state.sessionCode = params.session;
+    state.view = 'admin';
+    listenPoll();
+    return;
+  }
+}
+
+function listenPoll() {
+  if (state.unsubscribe) state.unsubscribe();
+  state.unsubscribe = listenToPoll(state.sessionCode, (data) => {
+    if (!data) {
+      document.getElementById('root').innerHTML = `
+        <div class="container">
+          <div class="card">
+            <div class="status-msg status-error">التصويت غير موجود أو تم حذفه</div>
+            <button class="primary-btn" onclick="window.location.href='${buildUrl({admin:1})}'" style="width:100%;margin-top:1rem;">العودة للوحة التحكم</button>
+          </div>
+        </div>`;
+      return;
+    }
+    if (!data.voteType) data.voteType = 'single';
+    state.pollData = data;
+    if (state.view === 'admin') renderAdminView();
+    else renderVoteView();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Views - Login
+// ═══════════════════════════════════════════════════════════════
+function renderLogin() {
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="login-card">
+        <div class="login-icon">🔒</div>
+        <h1 class="login-title">لوحة تحكم المشرف</h1>
+        <p class="login-subtitle">أدخل كلمة المرور للدخول</p>
+        <input type="password" id="pwd" class="input-field" placeholder="كلمة المرور" style="text-align:center;direction:ltr;" onkeydown="if(event.key==='Enter')doLogin()" />
+        <div id="login-err"></div>
+        <button class="primary-btn" style="width:100%;margin-top:8px;" onclick="doLogin()">دخول</button>
+      </div>
+      ${state.settings.trainerName ? `<div class="app-footer">${escapeHtml(state.settings.trainerName)}</div>` : ''}
+    </div>`;
+  setTimeout(() => document.getElementById('pwd')?.focus(), 100);
+}
+
+window.doLogin = function() {
+  const pwd = document.getElementById('pwd').value;
+  if (pwd === state.settings.adminPassword) {
+    state.isAdmin = true;
+    sessionStorage.setItem('is-admin', '1');
+    route();
+  } else {
+    document.getElementById('login-err').innerHTML = '<div class="status-msg status-error">كلمة المرور خاطئة</div>';
+  }
+};
+
+function renderCreateOrJoin() {
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="main-header">
+        ${state.settings.logoUrl ? `<img src="${escapeHtml(state.settings.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">لوحة تحكم المشرف</div>
+        <h1 class="main-header-title">مرحباً بك 👋</h1>
+      </div>
+      <div class="card">
+        <h3 class="admin-section-title">إنشاء تصويت جديد</h3>
+        <p style="color:var(--c-text-muted);font-size:14px;margin-bottom:1rem;line-height:1.7;">
+          سيتم إنشاء تصويت جديد برمز فريد، ويمكنك بعدها تعديل السؤال والخيارات ومشاركة الرابط مع المتدربين.
+        </p>
+        <button class="primary-btn" style="width:100%;" onclick="doCreatePoll()">+ إنشاء تصويت جديد</button>
+      </div>
+      <div class="card">
+        <h3 class="admin-section-title">الانضمام لتصويت موجود</h3>
+        <label class="field-label">رمز التصويت</label>
+        <input type="text" id="join-code" class="input-field" placeholder="ABC12" maxlength="5" style="text-align:center;font-family:'Courier New',monospace;letter-spacing:8px;font-size:22px;text-transform:uppercase;" />
+        <button class="secondary-btn" onclick="doJoinPoll()">فتح لوحة التحكم</button>
+      </div>
+      <div class="card">
+        <div class="settings-section-header" onclick="toggleSettings()" id="settings-toggle">
+          <h3 class="admin-section-title" style="margin:0;padding:0;border:none;">⚙️ الإعدادات المتقدمة</h3>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="settings-content" id="settings-content">
+          ${renderSettingsContent()}
+        </div>
+      </div>
+      <button class="danger-btn" style="width:100%;margin-top:1rem;" onclick="doLogout()">خروج</button>
+      ${state.settings.trainerName ? `<div class="app-footer">${escapeHtml(state.settings.trainerName)}</div>` : ''}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Settings Panel
+// ═══════════════════════════════════════════════════════════════
+function renderSettingsContent() {
+  const s = state.settings;
+  
+  let presetsHtml = '';
+  Object.entries(COLOR_PRESETS).forEach(([key, p]) => {
+    const isSelected = !s.useCustomColors && s.colorPreset === key;
+    presetsHtml += `
+      <div class="color-preset ${isSelected ? 'selected' : ''}" onclick="selectColorPreset('${key}')">
+        <div class="color-preset-swatch">
+          <div style="background:${p.primary};"></div>
+          <div style="background:${p.accent};"></div>
+        </div>
+        <div class="color-preset-name">${p.name}</div>
+        <div class="color-preset-desc">${p.desc}</div>
+      </div>`;
+  });
+  
+  return `
+    <!-- اسم التطبيق -->
+    <label class="field-label">✏️ اسم التطبيق (يظهر في التبويب)</label>
+    <input type="text" class="input-field" id="s-app-name" value="${escapeHtml(s.appName)}" placeholder="تطبيق التصويت التفاعلي" />
+    
+    <!-- اسم المدرب -->
+    <label class="field-label" style="margin-top:1rem;">👤 اسم المدرب/المشرف (يظهر في التذييل)</label>
+    <input type="text" class="input-field" id="s-trainer" value="${escapeHtml(s.trainerName)}" placeholder="مثال: خالد الحكمي · مركز التدريب" />
+    
+    <!-- الشعار -->
+    <label class="field-label" style="margin-top:1rem;">🖼️ شعار المركز/الشركة (اختياري)</label>
+    <div class="logo-upload">
+      <div class="logo-preview" id="logo-preview">
+        ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" alt="logo">` : '🖼️'}
+      </div>
+      <label class="logo-upload-label">
+        <input type="file" accept="image/*" onchange="handleLogoUpload(event)" />
+        ${s.logoUrl ? 'تغيير الشعار' : 'رفع شعار'}
+      </label>
+      ${s.logoUrl ? `<button class="logo-remove-btn" onclick="removeLogo()">حذف</button>` : ''}
+    </div>
+    <p style="font-size:11px;color:var(--c-text-dim);margin-top:6px;">الحد الأقصى: 500 كيلوبايت — يُفضّل PNG شفاف</p>
+    
+    <!-- الألوان -->
+    <label class="field-label" style="margin-top:1.25rem;">🎨 لوحة الألوان</label>
+    <div class="color-preset-grid">${presetsHtml}</div>
+    
+    <!-- ألوان مخصصة -->
+    <div style="padding:12px;background:var(--c-bg-input);border-radius:10px;border:1px solid var(--c-border);margin-top:10px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--c-text-main);">
+        <input type="checkbox" id="s-use-custom" ${s.useCustomColors ? 'checked' : ''} onchange="toggleCustomColors(this.checked)" style="accent-color:var(--c-accent);" />
+        استخدم ألوان مخصصة
+      </label>
+      <div id="custom-colors-wrap" style="${s.useCustomColors ? '' : 'display:none;'}margin-top:10px;">
+        <div class="color-picker-row">
+          <div class="color-picker-item">
+            <label>اللون الأساسي</label>
+            <input type="color" id="s-primary" value="${s.customPrimary || '#1e5fc9'}" />
+          </div>
+          <div class="color-picker-item">
+            <label>اللون المساعد</label>
+            <input type="color" id="s-accent" value="${s.customAccent || '#0ea5b5'}" />
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- كلمة المرور -->
+    <label class="field-label" style="margin-top:1.25rem;">🔑 كلمة مرور لوحة التحكم</label>
+    <input type="password" class="input-field" id="s-password" value="${escapeHtml(s.adminPassword)}" placeholder="كلمة المرور" style="direction:ltr;text-align:right;" />
+    <p style="font-size:11px;color:var(--c-text-dim);margin-top:-6px;margin-bottom:10px;">⚠️ احرص على حفظها في مكان آمن — إن نسيتها تحتاج إعادة التعيين من Firebase</p>
+    
+    <!-- النصوص الافتراضية -->
+    <label class="field-label" style="margin-top:1rem;">📝 العنوان الافتراضي للتصويت الجديد</label>
+    <input type="text" class="input-field" id="s-default-header" value="${escapeHtml(s.defaultHeader)}" placeholder="استطلاع رأي" />
+    
+    <label class="field-label" style="margin-top:1rem;">❓ السؤال الافتراضي للتصويت الجديد</label>
+    <input type="text" class="input-field" id="s-default-q" value="${escapeHtml(s.defaultQuestion)}" placeholder="ما هو سؤال التصويت؟" />
+    
+    <label class="field-label" style="margin-top:1rem;">👆 نص تلميح التصويت</label>
+    <input type="text" class="input-field" id="s-voter-hint" value="${escapeHtml(s.voterHint)}" placeholder="اضغط للتصويت ←" />
+    
+    <label class="field-label" style="margin-top:1rem;">✅ نص زر تأكيد التصويت (للاختيارات المتعددة)</label>
+    <input type="text" class="input-field" id="s-submit-text" value="${escapeHtml(s.submitButtonText)}" placeholder="تأكيد التصويت" />
+    
+    <label class="field-label" style="margin-top:1rem;">🎉 رسالة الشكر بعد التصويت</label>
+    <input type="text" class="input-field" id="s-thanks" value="${escapeHtml(s.thankYouMessage)}" placeholder="شكراً لك! تم تسجيل صوتك" />
+    
+    <div class="btn-row" style="margin-top:1.5rem;">
+      <button class="primary-btn" style="flex:1;" onclick="doSaveSettings()">💾 حفظ الإعدادات</button>
+      <button class="danger-btn" onclick="doResetSettings()">استعادة الافتراضي</button>
+    </div>
+    
+    <p class="tip-note">
+      💡 جميع الإعدادات تُحفظ في قاعدة بياناتك وتنطبق على كل التصويتات الحالية والقادمة. التغييرات تظهر فوراً على جميع الأجهزة المتصلة.
+    </p>
+  `;
+}
+
+window.toggleSettings = function() {
+  const header = document.getElementById('settings-toggle');
+  const content = document.getElementById('settings-content');
+  header.classList.toggle('open');
+  content.classList.toggle('open');
+};
+
+window.selectColorPreset = function(key) {
+  state.settings.colorPreset = key;
+  state.settings.useCustomColors = false;
+  applyColors(COLOR_PRESETS[key]);
+  // Re-render settings section only
+  const content = document.getElementById('settings-content');
+  if (content) content.innerHTML = renderSettingsContent();
+  content.classList.add('open');
+  document.getElementById('settings-toggle').classList.add('open');
+};
+
+window.toggleCustomColors = function(checked) {
+  document.getElementById('custom-colors-wrap').style.display = checked ? 'block' : 'none';
+  state.settings.useCustomColors = checked;
+  if (!checked) {
+    applyColors(COLOR_PRESETS[state.settings.colorPreset] || COLOR_PRESETS['royal-teal']);
+  } else {
+    const p = document.getElementById('s-primary')?.value || '#1e5fc9';
+    const a = document.getElementById('s-accent')?.value || '#0ea5b5';
+    applyColors({ mode: 'dark' }, p, a);
+  }
+};
+
+window.handleLogoUpload = function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (file.size > 500 * 1024) {
+    showToast('الحد الأقصى للشعار 500 كيلوبايت', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    state.settings.logoUrl = evt.target.result;
+    document.getElementById('logo-preview').innerHTML = `<img src="${evt.target.result}" alt="logo">`;
+    showToast('تم اختيار الشعار — اضغط حفظ الإعدادات لتطبيقه');
+  };
+  reader.readAsDataURL(file);
+};
+
+window.removeLogo = function() {
+  state.settings.logoUrl = '';
+  const content = document.getElementById('settings-content');
+  if (content) content.innerHTML = renderSettingsContent();
+  content.classList.add('open');
+  document.getElementById('settings-toggle').classList.add('open');
+  showToast('تم حذف الشعار — اضغط حفظ الإعدادات للتأكيد');
+};
+
+window.doSaveSettings = async function() {
+  const updates = {
+    appName: document.getElementById('s-app-name').value.trim() || 'تطبيق التصويت التفاعلي',
+    trainerName: document.getElementById('s-trainer').value.trim(),
+    adminPassword: document.getElementById('s-password').value || DEFAULT_PASSWORD,
+    colorPreset: state.settings.colorPreset,
+    useCustomColors: document.getElementById('s-use-custom').checked,
+    customPrimary: document.getElementById('s-primary').value,
+    customAccent: document.getElementById('s-accent').value,
+    logoUrl: state.settings.logoUrl || '',
+    defaultHeader: document.getElementById('s-default-header').value.trim() || 'استطلاع رأي',
+    defaultQuestion: document.getElementById('s-default-q').value.trim() || 'ما هو سؤال التصويت؟',
+    voterHint: document.getElementById('s-voter-hint').value.trim() || 'اضغط للتصويت ←',
+    submitButtonText: document.getElementById('s-submit-text').value.trim() || 'تأكيد التصويت',
+    thankYouMessage: document.getElementById('s-thanks').value.trim() || 'شكراً لك! تم تسجيل صوتك'
+  };
+  
+  const success = await saveSettings(updates);
+  if (success) {
+    showToast('✅ تم حفظ الإعدادات بنجاح');
+    document.title = updates.appName;
+    if (updates.useCustomColors) {
+      applyColors({ mode: 'dark' }, updates.customPrimary, updates.customAccent);
+    } else {
+      applyColors(COLOR_PRESETS[updates.colorPreset]);
+    }
+  } else {
+    showToast('فشل الحفظ، حاول مرة أخرى', 'error');
+  }
+};
+
+window.doResetSettings = async function() {
+  if (!confirm('هل تريد استعادة جميع الإعدادات الافتراضية؟')) return;
+  const defaults = {
+    appName: 'تطبيق التصويت التفاعلي',
+    trainerName: '',
+    adminPassword: DEFAULT_PASSWORD,
+    colorPreset: 'royal-teal',
+    useCustomColors: false,
+    customPrimary: '',
+    customAccent: '',
+    logoUrl: '',
+    defaultHeader: 'استطلاع رأي',
+    defaultQuestion: 'ما هو سؤال التصويت؟',
+    voterHint: 'اضغط للتصويت ←',
+    submitButtonText: 'تأكيد التصويت',
+    thankYouMessage: 'شكراً لك! تم تسجيل صوتك'
+  };
+  await saveSettings(defaults);
+  applyColors(COLOR_PRESETS['royal-teal']);
+  renderCreateOrJoin();
+  showToast('✅ تم استعادة الإعدادات الافتراضية');
+};
+
+window.doCreatePoll = async function() {
+  try {
+    const code = await createNewPoll();
+    window.location.href = buildUrl({ s: code, admin: 1 });
+  } catch (e) {
+    console.error(e);
+    showToast('فشل الإنشاء: ' + e.message, 'error');
+  }
+};
+
+window.doJoinPoll = function() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  if (!code || code.length !== 5) {
+    showToast('أدخل رمزاً صحيحاً من 5 أحرف', 'error');
+    return;
+  }
+  window.location.href = buildUrl({ s: code, admin: 1 });
+};
+
+window.doLogout = function() {
+  state.isAdmin = false;
+  sessionStorage.removeItem('is-admin');
+  window.location.href = buildUrl();
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Voter View
+// ═══════════════════════════════════════════════════════════════
+function renderVoteView() {
+  const poll = state.pollData;
+  if (!poll) return;
+  const total = poll.totalVotes || 0;
+  const isMulti = poll.voteType === 'multi';
+  const s = state.settings;
+  
+  let optionsHtml = '';
+  poll.options.forEach(opt => {
+    const pct = total > 0 ? Math.round(((opt.votes || 0) / total) * 100) : 0;
+    const maxVotes = Math.max(...poll.options.map(o => o.votes || 0), 1);
+    const barWidth = total > 0 ? ((opt.votes || 0) / maxVotes) : 0;
+    
+    if (state.userHasVoted) {
+      optionsHtml += `
+        <button class="option-btn" disabled>
+          <span class="bar-fill" style="transform: scaleX(${barWidth});"></span>
+          <span class="opt-text">${escapeHtml(opt.text)}</span>
+          <span class="opt-count">
+            <span class="percentage-badge">${pct}%</span>
+            <span>${opt.votes || 0} صوت</span>
+          </span>
+        </button>`;
+    } else if (isMulti) {
+      const isChecked = state.selectedOptions.has(opt.id);
+      optionsHtml += `
+        <button class="option-btn ${isChecked ? 'checked' : ''}" onclick="toggleOption('${opt.id}')">
+          <span class="opt-left">
+            <span class="multi-checkbox"></span>
+            <span class="opt-text">${escapeHtml(opt.text)}</span>
+          </span>
+          <span class="opt-hint">${isChecked ? 'محدد' : 'اضغط للاختيار'}</span>
+        </button>`;
+    } else {
+      optionsHtml += `
+        <button class="option-btn" onclick="doSingleVote('${opt.id}')">
+          <span class="opt-text">${escapeHtml(opt.text)}</span>
+          <span class="opt-hint">${escapeHtml(s.voterHint)}</span>
+        </button>`;
+    }
+  });
+  
+  const votedMsg = state.userHasVoted ? `<div class="status-msg status-success">${escapeHtml(s.thankYouMessage)}</div>` : '';
+  const liveTag = state.userHasVoted ? '<div style="text-align:center;margin-bottom:1rem;"><span class="live-indicator"><span class="live-dot"></span>النتائج مباشرة</span></div>' : '';
+  const typeBadge = !state.userHasVoted ?
+    `<div style="text-align:center;"><span class="type-badge">${isMulti ? 'يمكنك اختيار أكثر من خيار' : 'اختيار واحد فقط'}</span></div>` : '';
+  
+  let submitSection = '';
+  if (!state.userHasVoted && isMulti) {
+    const count = state.selectedOptions.size;
+    submitSection = `
+      <div style="text-align:center;margin-top:1rem;">
+        <div class="selection-counter">${count === 0 ? 'لم تختر أي بند بعد' : 'عدد الخيارات المحددة: ' + count}</div>
+        <button class="submit-multi-btn" onclick="doMultiVote()" ${count === 0 ? 'disabled' : ''}>
+          ${count === 0 ? 'اختر بنداً واحداً على الأقل' : escapeHtml(s.submitButtonText)}
+        </button>
+      </div>`;
+  }
+  
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="main-header">
+        ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">موضوع التصويت</div>
+        <h1 class="main-header-title">${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1>
+      </div>
+      <div class="card">
+        ${votedMsg}
+        ${liveTag}
+        <h2 class="poll-title">${escapeHtml(poll.title)}</h2>
+        ${typeBadge}
+        ${optionsHtml}
+        ${submitSection}
+        ${state.userHasVoted ? `<div class="total-count-badge">إجمالي المصوتين: ${total}</div>` : ''}
+      </div>
+      ${s.trainerName ? `<div class="app-footer">${escapeHtml(s.trainerName)}</div>` : ''}
+    </div>`;
+}
+
+window.toggleOption = function(oid) {
+  if (state.userHasVoted) return;
+  if (state.selectedOptions.has(oid)) state.selectedOptions.delete(oid);
+  else state.selectedOptions.add(oid);
+  renderVoteView();
+};
+
+window.doSingleVote = async function(oid) {
+  if (state.userHasVoted) return;
+  try {
+    await submitVote(state.sessionCode, [oid]);
+    state.userHasVoted = true;
+    showToast(state.settings.thankYouMessage);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+};
+
+window.doMultiVote = async function() {
+  if (state.userHasVoted || state.selectedOptions.size === 0) return;
+  try {
+    await submitVote(state.sessionCode, Array.from(state.selectedOptions));
+    state.userHasVoted = true;
+    state.selectedOptions.clear();
+    showToast(state.settings.thankYouMessage);
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Admin View
+// ═══════════════════════════════════════════════════════════════
+function renderAdminView() {
+  const poll = state.pollData;
+  if (!poll) return;
+  const total = poll.totalVotes || 0;
+  const topOption = poll.options.reduce((a, b) => ((a.votes || 0) > (b.votes || 0) ? a : b), poll.options[0]);
+  const voterUrl = buildUrl({ s: state.sessionCode });
+  const projectionUrl = buildUrl({ s: state.sessionCode, v: 'projection' });
+  const s = state.settings;
+  
+  let resultsHtml = '';
+  poll.options.forEach(opt => {
+    const pct = total > 0 ? Math.round(((opt.votes || 0) / total) * 100) : 0;
+    const maxVotes = Math.max(...poll.options.map(o => o.votes || 0), 1);
+    const barWidth = total > 0 ? ((opt.votes || 0) / maxVotes) * 100 : 0;
+    resultsHtml += `
+      <div class="result-bar-container">
+        <div class="result-bar-label">
+          <span class="result-bar-name">${escapeHtml(opt.text)}</span>
+          <span class="result-bar-stats">${opt.votes || 0} صوت · ${pct}%</span>
+        </div>
+        <div class="result-bar-track">
+          <div class="result-bar-fill" style="width:${barWidth}%;"></div>
+        </div>
+      </div>`;
+  });
+  
+  let editOptsHtml = '';
+  poll.options.forEach((opt, i) => {
+    editOptsHtml += `
+      <div class="option-row">
+        <input type="text" class="input-field" value="${escapeHtml(opt.text)}" id="edit-opt-${i}" placeholder="البند ${i + 1}" />
+        <button class="icon-btn" onclick="doRemoveOption(${i})" title="حذف">×</button>
+      </div>`;
+  });
+  
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="main-header">
+        ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">موضوع التصويت</div>
+        <h1 class="main-header-title">${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1>
+        <div class="session-code-display">رمز الجلسة: ${state.sessionCode}</div>
+      </div>
+      
+      <div class="view-toggle">
+        <button class="tab-btn active">لوحة التحكم</button>
+        <button class="tab-btn" onclick="window.location.href='${buildUrl({admin:1})}'">تصويت جديد</button>
+      </div>
+      
+      <!-- QR & Share -->
+      <div class="card">
+        <h3 class="admin-section-title">مشاركة التصويت مع المتدربين</h3>
+        <div class="qr-display">
+          <div style="font-size:14px;color:var(--c-accent);font-weight:600;margin-bottom:4px;">امسح الرمز أو شارك الرابط</div>
+          <div class="qr-code-wrap" id="qr-container"></div>
+          <div class="qr-link">${voterUrl}</div>
+          <button class="copy-btn" onclick="copyLink('${voterUrl}')">نسخ الرابط</button>
+          <a class="projection-btn" href="${projectionUrl}" target="_blank">عرض QR على شاشة كبيرة ↗</a>
+        </div>
+      </div>
+      
+      <!-- Live Results -->
+      <div class="card">
+        <div class="admin-header">
+          <h3 class="admin-section-title">النتائج المباشرة</h3>
+          <span class="live-indicator"><span class="live-dot"></span>مباشر</span>
+        </div>
+        <div style="margin-bottom:12px;">
+          <span class="type-badge">
+            ${poll.voteType === 'multi' ? 'تصويت متعدد الاختيارات' : 'تصويت باختيار واحد'}
+          </span>
+        </div>
+        <div class="stats-row">
+          <div class="metric">
+            <div class="metric-label">عدد المصوتين</div>
+            <div class="metric-value">${total}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">البند الأعلى</div>
+            <div class="metric-value" style="font-size:17px;">${total > 0 ? escapeHtml(topOption.text) : '—'}</div>
+          </div>
+        </div>
+        ${resultsHtml || '<div class="empty-state">لا توجد بنود بعد</div>'}
+      </div>
+      
+      <!-- Edit -->
+      <div class="card">
+        <h3 class="admin-section-title">تعديل التصويت</h3>
+        <label class="field-label">العنوان الرئيسي</label>
+        <input type="text" class="input-field" id="edit-header" value="${escapeHtml(poll.headerTitle || '')}" placeholder="${escapeHtml(s.defaultHeader)}" />
+        <label class="field-label" style="margin-top:1rem;">سؤال التصويت</label>
+        <input type="text" class="input-field" id="edit-title" value="${escapeHtml(poll.title)}" placeholder="اكتب سؤال التصويت" />
+        <label class="field-label" style="margin-top:1rem;">نوع التصويت</label>
+        <div class="vote-type-selector">
+          <label class="vote-type-option ${poll.voteType === 'single' ? 'selected' : ''}" onclick="doSelectType('single')">
+            <div class="vote-type-title"><span class="check-circle"></span>اختيار واحد</div>
+            <div class="vote-type-desc">المصوّت يختار بنداً واحداً</div>
+          </label>
+          <label class="vote-type-option ${poll.voteType === 'multi' ? 'selected' : ''}" onclick="doSelectType('multi')">
+            <div class="vote-type-title"><span class="check-circle"></span>اختيارات متعددة</div>
+            <div class="vote-type-desc">المصوّت يختار أكثر من بند</div>
+          </label>
+        </div>
+        <label class="field-label" style="margin-top:1rem;">بنود التصويت</label>
+        ${editOptsHtml}
+        <button class="secondary-btn" onclick="doAddOption()">+ إضافة بند جديد</button>
+        <div class="btn-row">
+          <button class="primary-btn" onclick="doSaveChanges()">حفظ التغييرات</button>
+          <button class="danger-btn" onclick="doResetVotes()">تصفير الأصوات</button>
+        </div>
+        <div class="export-section">
+          <div class="export-title">تصدير نتائج التصويت</div>
+          <div class="export-row">
+            <button class="export-btn export-btn-pdf" onclick="doExportPDF()">
+              <span style="font-weight:700;">PDF</span><span>تصدير</span>
+            </button>
+            <button class="export-btn export-btn-excel" onclick="doExportExcel()">
+              <span style="font-weight:700;">XLS</span><span>تصدير Excel</span>
+            </button>
+          </div>
+        </div>
+        <p class="tip-note">
+          ملاحظة: حفظ التغييرات أو تصفير الأصوات يسمح للمصوتين بالتصويت من جديد.
+        </p>
+      </div>
+      
+      <!-- SETTINGS (NEW!) -->
+      <div class="card">
+        <div class="settings-section-header" onclick="toggleSettings()" id="settings-toggle">
+          <h3 class="admin-section-title" style="margin:0;padding:0;border:none;">⚙️ الإعدادات المتقدمة</h3>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="settings-content" id="settings-content">
+          ${renderSettingsContent()}
+        </div>
+      </div>
+      
+      <button class="danger-btn" style="width:100%;" onclick="doLogout()">خروج من لوحة التحكم</button>
+      ${s.trainerName ? `<div class="app-footer">${escapeHtml(s.trainerName)}</div>` : ''}
+    </div>`;
+  
+  setTimeout(() => {
+    const container = document.getElementById('qr-container');
+    if (container && typeof QRCode !== 'undefined') {
+      container.innerHTML = '';
+      new QRCode(container, { text: voterUrl, width: 180, height: 180, colorDark: '#000', colorLight: '#ffffff' });
+    }
+  }, 50);
+}
+
+window.copyLink = function(url) {
+  navigator.clipboard.writeText(url).then(() => showToast('تم نسخ الرابط'));
+};
+
+window.doSelectType = async function(type) {
+  collectEdits();
+  state.pollData.voteType = type;
+  await updatePoll(state.sessionCode, state.pollData);
+};
+
+window.doAddOption = async function() {
+  collectEdits();
+  state.pollData.options.push({ id: 'o' + Date.now(), text: '', votes: 0 });
+  await updatePoll(state.sessionCode, state.pollData);
+};
+
+window.doRemoveOption = async function(idx) {
+  if (state.pollData.options.length <= 2) {
+    showToast('يجب أن يحتوي التصويت على بندين على الأقل', 'error');
+    return;
+  }
+  collectEdits();
+  state.pollData.options = state.pollData.options.filter((_, i) => i !== idx);
+  await updatePoll(state.sessionCode, state.pollData);
+};
+
+function collectEdits() {
+  const p = state.pollData;
+  const h = document.getElementById('edit-header');
+  const t = document.getElementById('edit-title');
+  if (h) p.headerTitle = h.value;
+  if (t) p.title = t.value;
+  p.options = p.options.map((o, i) => {
+    const el = document.getElementById('edit-opt-' + i);
+    return { ...o, text: el ? el.value : o.text };
+  });
+}
+
+window.doSaveChanges = async function() {
+  const newTitle = document.getElementById('edit-title').value.trim();
+  const newHeader = document.getElementById('edit-header').value.trim();
+  if (!newTitle) { showToast('أدخل سؤال التصويت', 'error'); return; }
+  if (!newHeader) { showToast('أدخل العنوان الرئيسي', 'error'); return; }
+  
+  const newOpts = [];
+  state.pollData.options.forEach((o, i) => {
+    const val = document.getElementById('edit-opt-' + i).value.trim();
+    if (val) newOpts.push({ id: o.id, text: val, votes: 0 });
+  });
+  
+  if (newOpts.length < 2) { showToast('يلزم بندان على الأقل', 'error'); return; }
+  
+  state.pollData.headerTitle = newHeader;
+  state.pollData.title = newTitle;
+  state.pollData.options = newOpts;
+  state.pollData.totalVotes = 0;
+  state.pollData.voters = {};
+  
+  await updatePoll(state.sessionCode, state.pollData);
+  showToast('تم حفظ التغييرات بنجاح');
+};
+
+window.doResetVotes = async function() {
+  if (!confirm('هل أنت متأكد من تصفير جميع الأصوات؟')) return;
+  await resetVotes(state.sessionCode);
+  showToast('تم تصفير الأصوات');
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Projection
+// ═══════════════════════════════════════════════════════════════
+async function renderProjection(code) {
+  const poll = await loadPoll(code);
+  if (!poll) {
+    document.getElementById('root').innerHTML = `
+      <div class="container"><div class="card"><div class="status-msg status-error">التصويت غير موجود</div></div></div>`;
+    return;
+  }
+  const voterUrl = buildUrl({ s: code });
+  const s = state.settings;
+  document.getElementById('root').innerHTML = `
+    <div class="projection-screen">
+      <div class="main-header" style="max-width:700px;margin:0 auto 2rem;">
+        ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">موضوع التصويت</div>
+        <h1 class="main-header-title" style="font-size:32px;">${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1>
+      </div>
+      <div class="projection-qr">
+        <div style="font-size:18px;color:var(--c-accent);font-weight:600;margin-bottom:1rem;">امسح الرمز للمشاركة في التصويت</div>
+        <div id="proj-qr" style="display:flex;justify-content:center;"></div>
+        <div class="qr-link" style="margin-top:1.5rem;font-size:14px;">${voterUrl}</div>
+        <div style="margin-top:1rem;font-size:16px;color:var(--c-accent);font-weight:700;letter-spacing:4px;">رمز الجلسة: ${code}</div>
+      </div>
+      <div class="projection-instructions">📱 وجّه كاميرا جوالك على الرمز للمشاركة</div>
+      ${s.trainerName ? `<div class="app-footer">${escapeHtml(s.trainerName)}</div>` : ''}
+    </div>`;
+  setTimeout(() => {
+    const c = document.getElementById('proj-qr');
+    if (c && typeof QRCode !== 'undefined') {
+      new QRCode(c, { text: voterUrl, width: 300, height: 300, colorDark: '#000', colorLight: '#ffffff' });
+    }
+  }, 50);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Export
+// ═══════════════════════════════════════════════════════════════
+window.doExportPDF = function() {
+  try {
+    const poll = state.pollData;
+    const total = poll.totalVotes || 0;
+    const topOpt = poll.options.reduce((a, b) => ((a.votes || 0) > (b.votes || 0) ? a : b), poll.options[0]);
+    const d = getFormattedDate();
+    const maxV = Math.max(...poll.options.map(o => o.votes || 0), 1);
+    const s = state.settings;
+    const primary = s.useCustomColors ? s.customPrimary : (COLOR_PRESETS[s.colorPreset]?.primary || '#1e5fc9');
+    const accent = s.useCustomColors ? s.customAccent : (COLOR_PRESETS[s.colorPreset]?.accent || '#0ea5b5');
+    
+    let rows = '';
+    poll.options.forEach((o, i) => {
+      const pct = total > 0 ? Math.round(((o.votes || 0) / total) * 100) : 0;
+      const bw = total > 0 ? ((o.votes || 0) / maxV) * 100 : 0;
+      rows += `<tr><td class="num-cell">${i + 1}</td><td class="option-cell">${escapeHtml(o.text)}</td><td class="votes-cell">${o.votes || 0}</td><td class="pct-cell">${pct}%</td><td class="bar-cell"><div class="bar-wrap"><div class="bar-inner" style="width:${bw}%;"></div></div></td></tr>`;
+    });
+    
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) { showToast('اسمح بالنوافذ المنبثقة', 'error'); return; }
+    
+    w.document.write(`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>نتائج التصويت</title>
+<style>
+@page { size: A4; margin: 15mm; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI','Tahoma',Arial,sans-serif;direction:rtl;color:#1e1b4b;background:#fff;padding:20px;line-height:1.6;}
+.header{background:linear-gradient(135deg,${primary} 0%,${accent} 100%);color:#fff;padding:24px;border-radius:12px;text-align:center;margin-bottom:20px;}
+.header .label{font-size:13px;opacity:.9;margin-bottom:6px;letter-spacing:1px;}
+.header h1{font-size:24px;font-weight:600;}
+.question-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:16px 20px;margin-bottom:20px;}
+.question-box .q-label{font-size:12px;color:${primary};font-weight:600;margin-bottom:4px;}
+.question-box .q-text{font-size:18px;font-weight:600;color:#0f172a;}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;}
+.stat-card{background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:14px;text-align:center;}
+.stat-card .s-label{font-size:11px;color:${primary};font-weight:600;margin-bottom:6px;}
+.stat-card .s-value{font-size:20px;font-weight:700;color:#0f172a;}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #bae6fd;}
+thead{background:linear-gradient(135deg,${primary} 0%,${accent} 100%);color:#fff;}
+th{padding:12px 10px;font-weight:600;font-size:13px;text-align:center;}
+td{padding:12px 10px;border-top:1px solid #e0f2fe;font-size:14px;text-align:center;}
+tbody tr:nth-child(even){background:#f8fafc;}
+.num-cell{width:40px;color:${primary};font-weight:600;}
+.option-cell{text-align:right;font-weight:500;}
+.votes-cell{font-weight:700;color:${primary};width:80px;}
+.pct-cell{font-weight:600;width:70px;}
+.bar-cell{width:200px;}
+.bar-wrap{height:10px;background:#e0f2fe;border-radius:10px;overflow:hidden;}
+.bar-inner{height:100%;background:linear-gradient(90deg,${primary} 0%,${accent} 100%);border-radius:10px;}
+.footer{margin-top:24px;padding-top:16px;border-top:1px dashed #bae6fd;text-align:center;font-size:12px;color:#64748b;}
+.print-bar{position:fixed;top:10px;left:10px;background:${primary};color:#fff;padding:10px 20px;border-radius:8px;cursor:pointer;border:none;font-size:14px;font-weight:600;}
+@media print { .print-bar{display:none;} body{padding:0;} }
+</style></head><body>
+<button class="print-bar" onclick="window.print()">طباعة / حفظ PDF</button>
+<div class="header"><div class="label">تقرير نتائج التصويت</div><h1>${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1></div>
+<div class="question-box"><div class="q-label">سؤال التصويت</div><div class="q-text">${escapeHtml(poll.title)}</div></div>
+<div class="stats">
+<div class="stat-card"><div class="s-label">عدد المصوتين</div><div class="s-value">${total}</div></div>
+<div class="stat-card"><div class="s-label">نوع التصويت</div><div class="s-value" style="font-size:14px;">${poll.voteType === 'multi' ? 'اختيارات متعددة' : 'اختيار واحد'}</div></div>
+<div class="stat-card"><div class="s-label">البند الأعلى</div><div class="s-value" style="font-size:14px;">${total > 0 ? escapeHtml(topOpt.text) : '—'}</div></div>
+</div>
+<table><thead><tr><th>#</th><th>البند</th><th>عدد الأصوات</th><th>النسبة</th><th>التمثيل البياني</th></tr></thead><tbody>${rows}</tbody></table>
+<div class="footer">${s.trainerName ? escapeHtml(s.trainerName) + ' · ' : ''}رمز الجلسة: ${state.sessionCode} · تم إنشاء التقرير في ${d.full}</div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});<\/script>
+</body></html>`);
+    w.document.close();
+    showToast('تم فتح نافذة الطباعة');
+  } catch (e) {
+    console.error(e);
+    showToast('حدث خطأ', 'error');
+  }
+};
+
+window.doExportExcel = function() {
+  try {
+    if (typeof XLSX === 'undefined') { showToast('المكتبة لم تُحمّل بعد', 'error'); return; }
+    const poll = state.pollData;
+    const total = poll.totalVotes || 0;
+    const topOpt = poll.options.reduce((a, b) => ((a.votes || 0) > (b.votes || 0) ? a : b), poll.options[0]);
+    const d = getFormattedDate();
+    const s = state.settings;
+    
+    const data = [
+      ['تقرير نتائج التصويت'], [],
+      ['العنوان الرئيسي', poll.headerTitle || s.defaultHeader],
+      ['سؤال التصويت', poll.title],
+      ['رمز الجلسة', state.sessionCode],
+      ['نوع التصويت', poll.voteType === 'multi' ? 'اختيارات متعددة' : 'اختيار واحد'],
+      ['عدد المصوتين', total],
+      ['عدد البنود', poll.options.length],
+      ['البند الأعلى', total > 0 ? topOpt.text : '—'],
+      ['تاريخ التصدير', d.full]
+    ];
+    if (s.trainerName) data.push(['المدرّب/المشرف', s.trainerName]);
+    data.push([]);
+    data.push(['#', 'البند', 'عدد الأصوات', 'النسبة المئوية']);
+    
+    poll.options.forEach((o, i) => {
+      const pct = total > 0 ? Math.round(((o.votes || 0) / total) * 100) : 0;
+      data.push([i + 1, o.text, o.votes || 0, pct + '%']);
+    });
+    const sumVotes = poll.options.reduce((s, o) => s + (o.votes || 0), 0);
+    data.push([]);
+    if (poll.voteType === 'multi') {
+      data.push(['', 'إجمالي الاختيارات', sumVotes, '—']);
+      data.push(['', 'عدد المصوتين', total, '—']);
+    } else {
+      data.push(['', 'المجموع', total, '100%']);
+    }
+    
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{wch:6},{wch:35},{wch:15},{wch:15}];
+    ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}}];
+    ws['!sheetView'] = [{RTL:true}];
+    
+    const wb = XLSX.utils.book_new();
+    wb.Workbook = {Views:[{RTL:true}]};
+    XLSX.utils.book_append_sheet(wb, ws, 'نتائج التصويت');
+    XLSX.writeFile(wb, `نتائج_التصويت_${d.file}.xlsx`);
+    showToast('تم تصدير Excel');
+  } catch (e) {
+    console.error(e);
+    showToast('حدث خطأ', 'error');
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// Start
+// ═══════════════════════════════════════════════════════════════
+(async function init() {
+  if (sessionStorage.getItem('is-admin') === '1') state.isAdmin = true;
+  await loadSettings();
+  listenToSettings();
+  route();
+})();
+</script>
+</body>
+</html>
