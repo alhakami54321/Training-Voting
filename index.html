@@ -1,0 +1,2467 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>تطبيق التصويت التفاعلي</title>
+<style>
+  :root {
+    --c-bg-main: #0a1628; --c-bg-card: #142236; --c-bg-input: #0f1c2e;
+    --c-bg-hover: #1a2d47; --c-border: #2a4060; --c-border-hover: #3d5577;
+    --c-primary: #1e5fc9; --c-primary-hover: #3d7dd9;
+    --c-accent: #0ea5b5; --c-accent-hover: #14b8ca;
+    --c-text-main: #e8f1ff; --c-text-muted: #8ca3c4; --c-text-dim: #5a7498;
+    --c-success: #10b981; --c-danger: #ef4444; --c-warning: #f59e0b;
+    --grad-primary: linear-gradient(135deg, #1e5fc9 0%, #0ea5b5 100%);
+    --grad-hover: linear-gradient(135deg, #3d7dd9 0%, #14b8ca 100%);
+    --grad-bg: linear-gradient(135deg, #0a1628 0%, #0f1f38 50%, #0a2035 100%);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, html { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Arial, sans-serif; background: var(--grad-bg); min-height: 100vh; direction: rtl; color: var(--c-text-main); }
+  .container { max-width: 720px; margin: 0 auto; padding: 1.5rem 1rem; }
+  .main-header { background: var(--grad-primary); border-radius: 20px; padding: 2rem 1.5rem; margin-bottom: 1.5rem; text-align: center; box-shadow: 0 10px 40px -10px rgba(30, 95, 201, 0.5); position: relative; overflow: hidden; color: white; }
+  .main-header::before { content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; background: rgba(255,255,255,0.08); border-radius: 50%; }
+  .main-header::after { content: ''; position: absolute; bottom: -30%; left: -10%; width: 150px; height: 150px; background: rgba(255,255,255,0.06); border-radius: 50%; }
+  .main-header-label { font-size: 12px; opacity: 0.85; margin-bottom: 8px; letter-spacing: 1px; position: relative; z-index: 1; font-weight: 500; }
+  .main-header-title { font-size: 26px; font-weight: 600; margin: 0; line-height: 1.4; position: relative; z-index: 1; }
+  .session-code-display { margin-top: 12px; padding: 8px 16px; background: rgba(255,255,255,0.15); border-radius: 20px; display: inline-block; font-size: 13px; font-family: 'Courier New', monospace; letter-spacing: 2px; position: relative; z-index: 1; }
+  .custom-logo { max-width: 80px; max-height: 80px; margin: 0 auto 10px; display: block; position: relative; z-index: 1; border-radius: 12px; background: rgba(255,255,255,0.1); padding: 4px; }
+  .card { background: var(--c-bg-card); border: 1px solid var(--c-border); border-radius: 18px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.3); }
+  .progress-wrap { margin-bottom: 1.5rem; }
+  .progress-info { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+  .progress-question-num { color: var(--c-accent); font-weight: 600; }
+  .progress-percent { color: var(--c-text-muted); font-weight: 500; }
+  .progress-track { height: 8px; background: var(--c-bg-input); border-radius: 10px; overflow: hidden; border: 1px solid var(--c-border); }
+  .progress-fill { height: 100%; background: var(--grad-primary); border-radius: 10px; transition: width 0.4s ease; box-shadow: 0 0 10px rgba(14, 165, 181, 0.5); }
+  .poll-title { font-size: 20px; font-weight: 600; color: var(--c-text-main); margin: 0 0 1.5rem; text-align: center; line-height: 1.5; padding-bottom: 1rem; border-bottom: 2px dashed var(--c-border); }
+  .optional-badge { display: inline-block; background: var(--c-warning); color: #78350f; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 700; margin-right: 6px; vertical-align: middle; }
+  .option-btn { display: flex; justify-content: space-between; align-items: center; width: 100%; background: var(--c-bg-input); border: 2px solid var(--c-border); border-radius: 14px; padding: 16px 18px; margin-bottom: 12px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 500; text-align: right; color: var(--c-text-main); transition: all 0.2s ease; position: relative; overflow: hidden; }
+  .option-btn:hover:not(:disabled) { border-color: var(--c-accent); background: var(--c-bg-hover); transform: translateY(-1px); box-shadow: 0 6px 16px -6px rgba(14, 165, 181, 0.4); }
+  .option-btn:disabled { cursor: default; }
+  .option-btn .bar-fill { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14, 165, 181, 0.2) 0%, rgba(30, 95, 201, 0.3) 100%); transform-origin: right; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); z-index: 0; }
+  .option-btn .opt-text, .option-btn .opt-count, .option-btn .opt-hint, .option-btn .opt-left { position: relative; z-index: 1; }
+  .opt-count { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--c-accent); font-size: 14px; }
+  .opt-hint { color: var(--c-accent); font-size: 13px; font-weight: 500; }
+  .percentage-badge { background: var(--grad-primary); color: white; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+  .multi-checkbox { width: 22px; height: 22px; border-radius: 6px; border: 2px solid var(--c-border-hover); flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; background: var(--c-bg-main); margin-left: 4px; }
+  .option-btn.checked .multi-checkbox { background: var(--grad-primary); border-color: transparent; }
+  .option-btn.checked .multi-checkbox::after { content: '✓'; color: #fff; font-size: 14px; font-weight: 700; line-height: 1; }
+  .option-btn.checked { border-color: var(--c-accent); background: var(--c-bg-hover); }
+  .opt-left { display: flex; align-items: center; gap: 10px; }
+  .nav-row { display: flex; gap: 10px; margin-top: 1.5rem; }
+  .nav-btn { padding: 14px 24px; border-radius: 14px; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+  .nav-btn-next { flex: 2; background: var(--grad-primary); color: #ffffff; border: none; box-shadow: 0 4px 14px rgba(30, 95, 201, 0.4); }
+  .nav-btn-next:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(30, 95, 201, 0.5); background: var(--grad-hover); }
+  .nav-btn-next:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  .nav-btn-skip { flex: 1; background: var(--c-bg-input); color: var(--c-text-muted); border: 2px solid var(--c-border); }
+  .nav-btn-skip:hover { background: var(--c-bg-hover); color: var(--c-accent); }
+  .selection-counter { text-align: center; font-size: 13px; color: var(--c-accent); font-weight: 500; margin-bottom: 8px; padding: 6px 12px; background: var(--c-bg-input); border-radius: 8px; display: inline-block; width: 100%; border: 1px solid var(--c-border); }
+  .type-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 3px 10px; border-radius: 20px; background: var(--c-bg-input); color: var(--c-accent); font-weight: 600; margin-bottom: 8px; border: 1px solid var(--c-border); }
+  .stats-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 1rem 0 1.5rem; }
+  .metric { background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 14px; padding: 14px 16px; }
+  .metric-label { font-size: 12px; color: var(--c-accent); margin-bottom: 6px; font-weight: 600; letter-spacing: 0.3px; }
+  .metric-value { font-size: 24px; font-weight: 700; color: var(--c-text-main); }
+  .result-bar-container { margin-bottom: 14px; }
+  .result-bar-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 14px; align-items: center; }
+  .result-bar-name { font-weight: 500; color: var(--c-text-main); }
+  .result-bar-stats { color: var(--c-accent); font-weight: 600; font-size: 13px; }
+  .result-bar-track { height: 10px; background: var(--c-bg-input); border-radius: 20px; overflow: hidden; position: relative; border: 1px solid var(--c-border); }
+  .result-bar-fill { height: 100%; background: var(--grad-primary); border-radius: 20px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 10px rgba(14, 165, 181, 0.5); }
+  .input-field { width: 100%; font-family: inherit; font-size: 15px; padding: 12px 14px; border: 2px solid var(--c-border); border-radius: 12px; background: var(--c-bg-input); color: var(--c-text-main); margin-bottom: 10px; text-align: right; direction: rtl; transition: all 0.2s; }
+  .input-field::placeholder { color: var(--c-text-dim); }
+  .input-field:focus { outline: none; border-color: var(--c-accent); background: var(--c-bg-main); box-shadow: 0 0 0 4px rgba(14, 165, 181, 0.15); }
+  .field-label { display: block; font-size: 13px; color: var(--c-accent); margin-bottom: 8px; font-weight: 600; }
+  .option-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .option-row .input-field { margin-bottom: 0; flex: 1; }
+  .icon-btn { background: rgba(239, 68, 68, 0.1); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; width: 42px; height: 42px; cursor: pointer; color: var(--c-danger); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; transition: all 0.15s; font-weight: 300; }
+  .icon-btn:hover { background: var(--c-danger); color: #ffffff; border-color: var(--c-danger); transform: scale(1.05); }
+  .vote-type-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .vote-type-option { position: relative; padding: 14px; background: var(--c-bg-input); border: 2px solid var(--c-border); border-radius: 12px; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .vote-type-option:hover { border-color: var(--c-border-hover); background: var(--c-bg-hover); }
+  .vote-type-option.selected { border-color: var(--c-accent); background: var(--c-bg-hover); box-shadow: 0 0 0 4px rgba(14, 165, 181, 0.1); }
+  .vote-type-title { font-size: 14px; font-weight: 600; color: var(--c-text-main); margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .vote-type-option.selected .vote-type-title { color: var(--c-accent); }
+  .vote-type-desc { font-size: 12px; color: var(--c-text-muted); line-height: 1.4; }
+  .check-circle { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--c-border-hover); display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .vote-type-option.selected .check-circle { border-color: var(--c-accent); background: var(--c-accent); }
+  .vote-type-option.selected .check-circle::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+  .question-item { background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; transition: all 0.2s; }
+  .question-item.expanded { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(14, 165, 181, 0.08); }
+  .question-item-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; gap: 8px; }
+  .question-item-title { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .question-number-badge { background: var(--grad-primary); color: white; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+  .question-item-text { font-weight: 500; font-size: 14px; color: var(--c-text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .question-item-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+  .q-reorder-btn { background: transparent; border: 1px solid var(--c-border); border-radius: 6px; width: 28px; height: 28px; color: var(--c-text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; font-family: inherit; }
+  .q-reorder-btn:hover:not(:disabled) { background: var(--c-bg-hover); color: var(--c-accent); border-color: var(--c-accent); }
+  .q-reorder-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .q-delete-btn { background: transparent; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px; width: 28px; height: 28px; color: var(--c-danger); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; font-family: inherit; }
+  .q-delete-btn:hover { background: var(--c-danger); color: white; }
+  .question-item-body { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--c-border); }
+  .question-item.expanded .question-item-body { display: block; }
+  .mini-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; border: 1px solid var(--c-border); }
+  .mini-badge.single { background: rgba(14, 165, 181, 0.1); color: var(--c-accent); border-color: rgba(14, 165, 181, 0.3); }
+  .mini-badge.multi { background: rgba(30, 95, 201, 0.1); color: #60a5fa; border-color: rgba(30, 95, 201, 0.3); }
+  .mini-badge.optional { background: rgba(245, 158, 11, 0.1); color: var(--c-warning); border-color: rgba(245, 158, 11, 0.3); }
+  .mini-badge.required { background: rgba(239, 68, 68, 0.1); color: #ff6b6b; border-color: rgba(239, 68, 68, 0.3); }
+  .toggle-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+  .toggle-switch input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 40px; height: 22px; background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 20px; position: relative; cursor: pointer; transition: all 0.2s; }
+  .toggle-switch input[type="checkbox"]::before { content: ''; position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--c-text-muted); transition: all 0.2s; }
+  .toggle-switch input[type="checkbox"]:checked { background: var(--c-accent); border-color: var(--c-accent); }
+  .toggle-switch input[type="checkbox"]:checked::before { right: calc(100% - 18px); background: white; }
+  .toggle-label { font-size: 13px; color: var(--c-text-main); }
+  .primary-btn { background: var(--grad-primary); color: #ffffff; border: none; padding: 12px 24px; border-radius: 12px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 12px rgba(30, 95, 201, 0.4); }
+  .primary-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(30, 95, 201, 0.5); background: var(--grad-hover); }
+  .secondary-btn { background: var(--c-bg-input); color: var(--c-accent); border: 2px solid var(--c-border); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; width: 100%; margin-top: 8px; transition: all 0.15s; }
+  .secondary-btn:hover { background: var(--c-bg-hover); border-color: var(--c-accent); }
+  .danger-btn { background: rgba(239, 68, 68, 0.1); color: var(--c-danger); border: 2px solid rgba(239, 68, 68, 0.3); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; transition: all 0.15s; }
+  .danger-btn:hover { background: rgba(239, 68, 68, 0.2); border-color: var(--c-danger); }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 1.25rem; }
+  .export-section { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 2px dashed var(--c-border); }
+  .export-title { font-size: 13px; color: var(--c-accent); margin-bottom: 10px; font-weight: 600; }
+  .export-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .export-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; border-radius: 12px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; transition: all 0.2s; border: 2px solid transparent; }
+  .export-btn-pdf { background: rgba(239, 68, 68, 0.1); color: #ff6b6b; border-color: rgba(239, 68, 68, 0.3); }
+  .export-btn-pdf:hover { background: var(--c-danger); color: #ffffff; transform: translateY(-1px); }
+  .export-btn-excel { background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+  .export-btn-excel:hover { background: var(--c-success); color: #ffffff; transform: translateY(-1px); }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 2000; padding: 1rem; }
+  .modal-card { background: var(--c-bg-card); border: 1px solid var(--c-border); border-radius: 18px; padding: 1.5rem; max-width: 420px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+  .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: var(--c-text-main); }
+  .modal-subtitle { font-size: 13px; color: var(--c-text-muted); margin-bottom: 1.25rem; }
+  .modal-option { padding: 14px; background: var(--c-bg-input); border: 2px solid var(--c-border); border-radius: 12px; cursor: pointer; margin-bottom: 10px; transition: all 0.15s; }
+  .modal-option:hover { border-color: var(--c-accent); background: var(--c-bg-hover); }
+  .modal-option-title { font-weight: 600; color: var(--c-text-main); margin-bottom: 4px; }
+  .modal-option-desc { font-size: 12px; color: var(--c-text-muted); line-height: 1.5; }
+  .login-card { background: var(--c-bg-card); border-radius: 20px; padding: 2.5rem 2rem; max-width: 420px; margin: 3rem auto; box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.5); border: 1px solid var(--c-border); }
+  .login-icon { width: 64px; height: 64px; margin: 0 auto 1rem; background: var(--grad-primary); border-radius: 20px; display: flex; align-items: center; justify-content: center; color: white; font-size: 28px; box-shadow: 0 8px 24px rgba(30, 95, 201, 0.4); }
+  .login-title { text-align: center; font-size: 20px; font-weight: 600; margin-bottom: 0.5rem; color: var(--c-text-main); }
+  .login-subtitle { text-align: center; font-size: 13px; color: var(--c-text-muted); margin-bottom: 1.75rem; }
+  .qr-display { text-align: center; padding: 1.5rem; background: var(--c-bg-input); border: 2px dashed var(--c-border-hover); border-radius: 16px; margin-bottom: 1rem; }
+  .qr-code-wrap { background: white; display: inline-block; padding: 12px; border-radius: 12px; margin: 12px auto; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .qr-code-wrap img, .qr-code-wrap canvas { display: block; }
+  .qr-link { background: var(--c-bg-main); padding: 10px 16px; border-radius: 10px; font-family: 'Courier New', monospace; font-size: 13px; color: var(--c-accent); word-break: break-all; margin-top: 12px; border: 1px solid var(--c-border); }
+  .copy-btn { background: var(--c-primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 10px; font-family: inherit; }
+  .copy-btn:hover { background: var(--c-primary-hover); }
+  .projection-btn { display: inline-block; background: var(--c-bg-card); color: var(--c-accent); border: 2px solid var(--c-border-hover); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-top: 10px; margin-right: 8px; text-decoration: none; }
+  .projection-btn:hover { background: var(--c-bg-hover); border-color: var(--c-accent); }
+  .view-toggle { display: flex; gap: 8px; margin-bottom: 1.5rem; background: var(--c-bg-card); padding: 6px; border-radius: 14px; border: 1px solid var(--c-border); }
+  .tab-btn { flex: 1; background: transparent; border: none; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 500; color: var(--c-text-muted); transition: all 0.25s ease; }
+  .tab-btn:hover:not(.active) { color: var(--c-accent); background: var(--c-bg-hover); }
+  .tab-btn.active { background: var(--grad-primary); color: #ffffff; box-shadow: 0 4px 12px rgba(30, 95, 201, 0.4); }
+  .admin-section-title { font-size: 16px; font-weight: 600; margin: 0 0 1.25rem; padding-bottom: 10px; border-bottom: 2px dashed var(--c-border); color: var(--c-text-main); display: flex; align-items: center; gap: 8px; }
+  .admin-section-title::before { content: ''; width: 4px; height: 20px; background: var(--grad-primary); border-radius: 2px; }
+  .live-indicator { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #ffffff; background: linear-gradient(135deg, var(--c-success) 0%, #059669 100%); padding: 5px 12px; border-radius: 20px; font-weight: 600; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4); }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #ffffff; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.85); } }
+  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .admin-header .admin-section-title { margin: 0; padding: 0; border: none; }
+  .total-count-badge { text-align: center; margin-top: 1.25rem; padding: 10px; background: var(--c-bg-input); border-radius: 12px; color: var(--c-accent); font-size: 13px; font-weight: 600; border: 1px solid var(--c-border); }
+  .tip-note { font-size: 12px; color: var(--c-text-muted); margin-top: 14px; padding: 10px 12px; background: var(--c-bg-input); border-radius: 10px; border-right: 3px solid var(--c-accent); line-height: 1.6; }
+  .empty-state { text-align: center; padding: 2rem 1rem; color: var(--c-text-dim); font-size: 14px; }
+  .loading { text-align: center; padding: 2rem; color: var(--c-accent); font-size: 14px; font-weight: 500; }
+  .status-msg { padding: 12px 16px; border-radius: 12px; font-size: 14px; margin-bottom: 1rem; text-align: center; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .status-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+  .status-error { background: rgba(239, 68, 68, 0.15); color: #ff6b6b; border: 1px solid rgba(239, 68, 68, 0.3); }
+  .floating-toast { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 1000; animation: slideDown 0.3s ease; background: var(--c-bg-card) !important; border: 1px solid rgba(16, 185, 129, 0.4) !important; }
+  @keyframes slideDown { from { transform: translate(-50%, -30px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+  .conn-status { position: fixed; bottom: 16px; left: 16px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; z-index: 100; display: flex; align-items: center; gap: 6px; }
+  .conn-status.online { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+  .conn-status.offline { background: rgba(239, 68, 68, 0.15); color: #ff6b6b; border: 1px solid rgba(239, 68, 68, 0.3); }
+  .app-footer { text-align: center; padding: 1.5rem 0 0.5rem; font-size: 12px; color: var(--c-text-dim); }
+  .projection-screen { min-height: 100vh; padding: 2rem; display: flex; flex-direction: column; justify-content: center; }
+  .projection-qr { text-align: center; padding: 2rem; background: var(--c-bg-card); border-radius: 20px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); max-width: 500px; margin: 0 auto; border: 1px solid var(--c-border); }
+  .projection-qr img, .projection-qr canvas { width: 300px; height: 300px; max-width: 100%; }
+  .projection-instructions { font-size: 20px; text-align: center; margin-top: 1.5rem; color: var(--c-accent); }
+  .settings-section-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 10px 0; user-select: none; }
+  .settings-section-header:hover .admin-section-title { color: var(--c-accent); }
+  .toggle-icon { font-size: 20px; color: var(--c-text-muted); transition: transform 0.2s; }
+  .settings-section-header.open .toggle-icon { transform: rotate(180deg); }
+  .settings-content { display: none; margin-top: 1rem; }
+  .settings-content.open { display: block; }
+  .color-preset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+  .color-preset { padding: 12px; border-radius: 12px; cursor: pointer; border: 2px solid var(--c-border); transition: all 0.2s; background: var(--c-bg-input); }
+  .color-preset:hover { border-color: var(--c-border-hover); }
+  .color-preset.selected { border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(14, 165, 181, 0.15); }
+  .color-preset-swatch { display: flex; gap: 4px; margin-bottom: 8px; height: 24px; border-radius: 6px; overflow: hidden; }
+  .color-preset-swatch > div { flex: 1; }
+  .color-preset-name { font-size: 12px; font-weight: 600; color: var(--c-text-main); }
+  .color-preset-desc { font-size: 11px; color: var(--c-text-muted); margin-top: 2px; }
+  .color-picker-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .color-picker-item { padding: 10px; background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 10px; }
+  .color-picker-item label { display: block; font-size: 12px; color: var(--c-text-muted); margin-bottom: 6px; }
+  .color-picker-item input[type="color"] { width: 100%; height: 40px; border: none; border-radius: 6px; cursor: pointer; background: transparent; }
+  .logo-upload { display: flex; align-items: center; gap: 10px; padding: 12px; background: var(--c-bg-input); border: 2px dashed var(--c-border); border-radius: 12px; }
+  .logo-preview { width: 50px; height: 50px; border-radius: 8px; background: var(--c-bg-main); display: flex; align-items: center; justify-content: center; color: var(--c-text-dim); font-size: 20px; overflow: hidden; flex-shrink: 0; }
+  .logo-preview img { width: 100%; height: 100%; object-fit: contain; }
+  .logo-upload-label { flex: 1; cursor: pointer; padding: 8px 12px; background: var(--c-primary); color: white; border-radius: 8px; text-align: center; font-size: 13px; font-weight: 600; }
+  .logo-upload-label:hover { background: var(--c-primary-hover); }
+  .logo-upload input[type="file"] { display: none; }
+  .logo-remove-btn { background: transparent; border: 1px solid var(--c-danger); color: var(--c-danger); padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 11px; font-family: inherit; }
+  .question-results-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px dashed var(--c-border); }
+  .question-result-card { background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .question-result-title { font-size: 14px; font-weight: 600; color: var(--c-text-main); margin-bottom: 10px; }
+  .voter-question-card { background: var(--c-bg-input); border: 2px solid var(--c-border); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; transition: all 0.25s; position: relative; }
+  .voter-question-card.answered { border-color: rgba(16, 185, 129, 0.4); background: linear-gradient(135deg, var(--c-bg-input) 0%, rgba(16, 185, 129, 0.05) 100%); }
+  .voter-question-card.error { border-color: var(--c-danger); background: linear-gradient(135deg, var(--c-bg-input) 0%, rgba(239, 68, 68, 0.08) 100%); animation: shake 0.4s; }
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  .voter-question-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed var(--c-border); }
+  .voter-question-num { background: var(--grad-primary); color: white; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(30, 95, 201, 0.3); }
+  .voter-question-title-wrap { flex: 1; min-width: 0; }
+  .voter-question-title { font-size: 16px; font-weight: 600; color: var(--c-text-main); line-height: 1.5; margin-bottom: 4px; }
+  .voter-question-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+  .voter-question-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; border: 1px solid transparent; }
+  .voter-question-badge.single { background: rgba(14, 165, 181, 0.15); color: var(--c-accent); border-color: rgba(14, 165, 181, 0.3); }
+  .voter-question-badge.multi { background: rgba(30, 95, 201, 0.15); color: #60a5fa; border-color: rgba(30, 95, 201, 0.3); }
+  .voter-question-badge.required { background: rgba(239, 68, 68, 0.12); color: #ff6b6b; border-color: rgba(239, 68, 68, 0.3); }
+  .voter-question-badge.optional { background: rgba(245, 158, 11, 0.12); color: var(--c-warning); border-color: rgba(245, 158, 11, 0.3); }
+  .voter-question-badge.answered-tag { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+  .voter-option { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px; background: var(--c-bg-main); border: 2px solid var(--c-border); border-radius: 10px; cursor: pointer; transition: all 0.15s; color: var(--c-text-main); font-size: 14px; font-weight: 500; }
+  .voter-option:hover { border-color: var(--c-border-hover); background: var(--c-bg-hover); }
+  .voter-option.selected { border-color: var(--c-accent); background: var(--c-bg-hover); box-shadow: 0 0 0 3px rgba(14, 165, 181, 0.1); }
+  .voter-option-indicator { width: 20px; height: 20px; flex-shrink: 0; border: 2px solid var(--c-border-hover); display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+  .voter-option-indicator.radio { border-radius: 50%; }
+  .voter-option-indicator.checkbox { border-radius: 5px; }
+  .voter-option.selected .voter-option-indicator { background: var(--c-accent); border-color: var(--c-accent); }
+  .voter-option.selected .voter-option-indicator.radio::after { content: ''; width: 8px; height: 8px; border-radius: 50%; background: white; }
+  .voter-option.selected .voter-option-indicator.checkbox::after { content: '✓'; color: white; font-size: 12px; font-weight: 700; line-height: 1; }
+  .voter-option-text { flex: 1; }
+  .submit-all-btn { background: var(--grad-primary); color: white; border: none; padding: 16px 24px; border-radius: 14px; cursor: pointer; font-family: inherit; font-size: 16px; font-weight: 700; width: 100%; transition: all 0.2s; box-shadow: 0 6px 18px rgba(30, 95, 201, 0.4); margin-top: 1rem; }
+  .submit-all-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(30, 95, 201, 0.5); background: var(--grad-hover); }
+  .submit-all-btn:active { transform: translateY(0); }
+  .submit-summary { background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 12px; padding: 12px 14px; margin: 0.5rem 0 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 13px; flex-wrap: wrap; gap: 8px; }
+  .submit-summary .count-label { color: var(--c-text-muted); }
+  .submit-summary .count-value { color: var(--c-accent); font-weight: 700; font-size: 15px; }
+  .submit-summary .count-warning { color: var(--c-warning); font-size: 12px; font-weight: 600; }
+  .archive-header { display: flex; gap: 10px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .archive-search { flex: 2; min-width: 200px; margin-bottom: 0; }
+  .archive-sort-btn { flex: 1; min-width: 120px; background: var(--c-bg-input); border: 2px solid var(--c-border); border-radius: 12px; padding: 12px; color: var(--c-text-main); font-family: inherit; font-size: 14px; cursor: pointer; text-align: right; direction: rtl; }
+  .archive-sort-btn:focus { outline: none; border-color: var(--c-accent); }
+  .archive-item { background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; transition: all 0.2s; }
+  .archive-item:hover { border-color: var(--c-accent); background: var(--c-bg-hover); transform: translateY(-1px); box-shadow: 0 6px 18px -6px rgba(14, 165, 181, 0.2); }
+  .archive-item-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; gap: 10px; }
+  .archive-item-title-block { flex: 1; min-width: 0; }
+  .archive-item-title { font-size: 16px; font-weight: 600; color: var(--c-text-main); margin-bottom: 4px; line-height: 1.4; }
+  .archive-item-code { display: inline-block; background: var(--grad-primary); color: white; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; font-family: 'Courier New', monospace; letter-spacing: 1.5px; }
+  .archive-item-meta { display: flex; gap: 12px; font-size: 12px; color: var(--c-text-muted); margin-bottom: 10px; flex-wrap: wrap; }
+  .archive-item-meta span { display: inline-flex; align-items: center; gap: 4px; }
+  .archive-item-meta .meta-icon { color: var(--c-accent); }
+  .archive-item-actions { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+  .archive-action-btn { background: var(--c-bg-main); border: 1px solid var(--c-border); border-radius: 10px; padding: 8px 10px; cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--c-text-muted); transition: all 0.15s; text-align: center; }
+  .archive-action-btn:hover { background: var(--c-bg-hover); color: var(--c-accent); border-color: var(--c-accent); }
+  .archive-action-btn.danger { color: #ff6b6b; border-color: rgba(239, 68, 68, 0.3); }
+  .archive-action-btn.danger:hover { background: var(--c-danger); color: white; border-color: var(--c-danger); }
+  .archive-empty { text-align: center; padding: 3rem 1rem; color: var(--c-text-muted); }
+  .archive-empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+  .archive-stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  .archive-stat { background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 12px; padding: 10px; text-align: center; }
+  .archive-stat-label { font-size: 11px; color: var(--c-text-muted); margin-bottom: 4px; }
+  .archive-stat-value { font-size: 20px; font-weight: 700; color: var(--c-accent); }
+  .results-modal-content { max-height: 85vh; overflow-y: auto; max-width: 600px; }
+  .results-question-block { background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .results-question-block-title { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px dashed var(--c-border); }
+  .results-question-num { background: var(--grad-primary); color: white; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+  .results-question-text { font-size: 14px; font-weight: 600; color: var(--c-text-main); flex: 1; }
+  .results-no-answers { color: var(--c-text-dim); font-size: 13px; font-style: italic; text-align: center; padding: 8px; }
+  /* ═══ تقييم المدرب ═══ */
+  .trainer-rating-card { background: var(--c-bg-input); border: 2px solid var(--c-border); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; position: relative; }
+  .trainer-rating-card.answered { border-color: rgba(16, 185, 129, 0.4); background: linear-gradient(135deg, var(--c-bg-input) 0%, rgba(16, 185, 129, 0.05) 100%); }
+  .trainer-rating-card.error { border-color: var(--c-danger); animation: shake 0.4s; }
+  .trainer-rating-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed var(--c-border); }
+  .trainer-rating-icon { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); color: white; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+  .trainer-rating-title-wrap { flex: 1; min-width: 0; }
+  .trainer-rating-title { font-size: 16px; font-weight: 600; color: var(--c-text-main); line-height: 1.5; margin-bottom: 4px; }
+  .trainer-rating-subtitle { font-size: 12px; color: var(--c-text-muted); }
+  .rating-axis { background: var(--c-bg-main); border: 1px solid var(--c-border); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; transition: all 0.2s; }
+  .rating-axis.filled { border-color: rgba(245, 158, 11, 0.4); background: linear-gradient(135deg, var(--c-bg-main) 0%, rgba(245, 158, 11, 0.03) 100%); }
+  .rating-axis-label { font-size: 14px; color: var(--c-text-main); font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .rating-axis-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .rating-axis-value { color: var(--c-warning); font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .stars-row { display: flex; gap: 6px; direction: ltr; justify-content: center; }
+  .star-btn { background: transparent; border: none; padding: 4px; cursor: pointer; font-size: 32px; line-height: 1; color: #3a4a63; transition: all 0.15s; font-family: inherit; user-select: none; }
+  .star-btn:hover { transform: scale(1.15); }
+  .star-btn.filled { color: #f59e0b; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+  .star-btn:active { transform: scale(0.95); }
+  .rating-comment-wrap { margin-top: 12px; }
+  .rating-comment-label { font-size: 13px; color: var(--c-accent); margin-bottom: 6px; font-weight: 600; display: block; }
+  .rating-comment { width: 100%; min-height: 80px; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 2px solid var(--c-border); border-radius: 10px; background: var(--c-bg-main); color: var(--c-text-main); resize: vertical; text-align: right; direction: rtl; transition: all 0.2s; }
+  .rating-comment:focus { outline: none; border-color: var(--c-accent); box-shadow: 0 0 0 3px rgba(14, 165, 181, 0.15); }
+  .rating-comment::placeholder { color: var(--c-text-dim); }
+  /* ═══ نتائج تقييم المدرب في لوحة التحكم ═══ */
+  .trainer-result-block { background: var(--c-bg-input); border: 1px solid var(--c-border); border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+  .trainer-overall { display: flex; align-items: center; gap: 14px; padding: 14px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(249, 115, 22, 0.05) 100%); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 12px; margin-bottom: 12px; }
+  .trainer-overall-score { font-size: 36px; font-weight: 700; color: var(--c-warning); line-height: 1; min-width: 80px; text-align: center; }
+  .trainer-overall-score small { font-size: 16px; color: var(--c-text-muted); font-weight: 500; }
+  .trainer-overall-info { flex: 1; }
+  .trainer-overall-stars { direction: ltr; font-size: 20px; letter-spacing: 2px; margin-bottom: 4px; color: #3a4a63; }
+  .trainer-overall-stars .s-filled { color: #f59e0b; }
+  .trainer-overall-label { font-size: 12px; color: var(--c-text-muted); }
+  .axis-result-row { margin-bottom: 10px; }
+  .axis-result-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px; align-items: center; }
+  .axis-result-name { font-weight: 600; color: var(--c-text-main); }
+  .axis-result-stats { color: var(--c-warning); font-weight: 700; font-size: 13px; }
+  .axis-result-track { height: 8px; background: var(--c-bg-main); border-radius: 20px; overflow: hidden; border: 1px solid var(--c-border); }
+  .axis-result-fill { height: 100%; background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%); border-radius: 20px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+  .comments-section { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--c-border); }
+  .comments-section-title { font-size: 13px; color: var(--c-accent); font-weight: 600; margin-bottom: 10px; }
+  .comment-item { background: var(--c-bg-main); border: 1px solid var(--c-border); border-right: 3px solid var(--c-accent); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; font-size: 13px; color: var(--c-text-main); line-height: 1.6; }
+  .comment-item-meta { font-size: 11px; color: var(--c-text-dim); margin-top: 4px; }
+  /* ═══ إعدادات محاور التقييم ═══ */
+  .axis-edit-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .axis-edit-row .input-field { margin-bottom: 0; flex: 1; }
+  .toggle-enable-rating { padding: 12px; background: var(--c-bg-input); border-radius: 10px; border: 1px solid var(--c-border); margin-bottom: 1rem; }
+  @media (max-width: 480px) { 
+    .main-header-title { font-size: 22px; } 
+    .container { padding: 1rem 0.75rem; } 
+    .card { padding: 1.25rem; } 
+    .color-preset-grid, .color-picker-row { grid-template-columns: 1fr; }
+    .star-btn { font-size: 28px; padding: 3px; }
+    .stars-row { gap: 4px; }
+    .trainer-overall-score { font-size: 28px; min-width: 70px; }
+  }
+</style>
+</head>
+<body>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<div id="root"><div class="container"><div class="loading">جاري التحميل...</div></div></div>
+<div id="conn-status" class="conn-status offline"><span class="live-dot" style="background: currentColor;"></span><span>متصل</span></div>
+<div id="modal-root"></div>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// 🔧 CONFIGURATION
+// ═══════════════════════════════════════════════════════════════
+const DEFAULT_PASSWORD = "Khalid@Vote2026!";
+const firebaseConfig = {
+  apiKey: "AIzaSyBUmpBONRyZtDavQQ8gjjDbU17-BaPgB9c",
+  authDomain: "training-voting.firebaseapp.com",
+  databaseURL: "https://training-voting-default-rtdb.firebaseio.com",
+  projectId: "training-voting",
+  storageBucket: "training-voting.firebasestorage.app",
+  messagingSenderId: "21567925569",
+  appId: "1:21567925569:web:0d050489c2106a6c9445c0"
+};
+const COLOR_PRESETS = {
+  'royal-teal': { name: 'أزرق ملكي + فيروزي', desc: 'رسمي وأنيق', primary: '#1e5fc9', accent: '#0ea5b5', mode: 'dark' },
+  'navy-gold': { name: 'أزرق بحري + ذهبي', desc: 'فاخر ومميز', primary: '#1e3a8a', accent: '#d4a017', mode: 'dark' },
+  'emerald': { name: 'أخضر زمردي', desc: 'هادئ ومحايد', primary: '#047857', accent: '#10b981', mode: 'dark' },
+  'modern-orange': { name: 'رمادي + برتقالي', desc: 'عصري وحيوي', primary: '#4b5563', accent: '#f97316', mode: 'dark' },
+  'purple-pink': { name: 'بنفسجي + وردي', desc: 'عصري وجذاب', primary: '#7c3aed', accent: '#ec4899', mode: 'light' },
+  'sky-blue': { name: 'سماوي فاتح', desc: 'هادئ ومشرق', primary: '#0284c7', accent: '#0ea5e9', mode: 'light' }
+};
+
+function applyColors(preset, customPrimary, customAccent) {
+  const root = document.documentElement;
+  const mode = preset?.mode || 'dark';
+  const primary = customPrimary || preset?.primary || '#1e5fc9';
+  const accent = customAccent || preset?.accent || '#0ea5b5';
+  if (mode === 'light') {
+    root.style.setProperty('--c-bg-main', '#f5f7fa');
+    root.style.setProperty('--c-bg-card', '#ffffff');
+    root.style.setProperty('--c-bg-input', '#f8fafc');
+    root.style.setProperty('--c-bg-hover', '#f1f5f9');
+    root.style.setProperty('--c-border', '#e2e8f0');
+    root.style.setProperty('--c-border-hover', '#cbd5e1');
+    root.style.setProperty('--c-text-main', '#0f172a');
+    root.style.setProperty('--c-text-muted', '#64748b');
+    root.style.setProperty('--c-text-dim', '#94a3b8');
+    root.style.setProperty('--grad-bg', `linear-gradient(135deg, #f5f7fa 0%, #e8f0fb 50%, #f0f4fa 100%)`);
+  } else {
+    root.style.setProperty('--c-bg-main', '#0a1628');
+    root.style.setProperty('--c-bg-card', '#142236');
+    root.style.setProperty('--c-bg-input', '#0f1c2e');
+    root.style.setProperty('--c-bg-hover', '#1a2d47');
+    root.style.setProperty('--c-border', '#2a4060');
+    root.style.setProperty('--c-border-hover', '#3d5577');
+    root.style.setProperty('--c-text-main', '#e8f1ff');
+    root.style.setProperty('--c-text-muted', '#8ca3c4');
+    root.style.setProperty('--c-text-dim', '#5a7498');
+    root.style.setProperty('--grad-bg', `linear-gradient(135deg, #0a1628 0%, #0f1f38 50%, #0a2035 100%)`);
+  }
+  root.style.setProperty('--c-primary', primary);
+  root.style.setProperty('--c-accent', accent);
+  root.style.setProperty('--grad-primary', `linear-gradient(135deg, ${primary} 0%, ${accent} 100%)`);
+}
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+db.ref('.info/connected').on('value', (snap) => {
+  const el = document.getElementById('conn-status');
+  if (snap.val() === true) { el.className = 'conn-status online'; el.querySelector('span:last-child').textContent = 'متصل'; }
+  else { el.className = 'conn-status offline'; el.querySelector('span:last-child').textContent = 'غير متصل'; }
+});
+
+function generateCode(len = 5) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < len; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+function getUrlParams() { const p = new URLSearchParams(window.location.search); return { session: p.get('s'), view: p.get('v'), admin: p.get('admin') === '1' }; }
+function buildUrl(params = {}) {
+  const url = new URL(window.location.href); url.search = '';
+  Object.keys(params).forEach(k => { if (params[k] != null) url.searchParams.set(k, params[k]); });
+  return url.toString();
+}
+function getOrCreateDeviceId() {
+  let id = localStorage.getItem('device-id');
+  if (!id) { id = 'd_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10); localStorage.setItem('device-id', id); }
+  return id;
+}
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = 'floating-toast status-msg status-' + type;
+  t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+function getFormattedDate() {
+  const n = new Date();
+  const dd = String(n.getDate()).padStart(2, '0');
+  const mm = String(n.getMonth() + 1).padStart(2, '0');
+  const yyyy = n.getFullYear();
+  const hh = String(n.getHours()).padStart(2, '0');
+  const min = String(n.getMinutes()).padStart(2, '0');
+  return { full: `${dd}/${mm}/${yyyy} - ${hh}:${min}`, file: `${yyyy}-${mm}-${dd}_${hh}${min}` };
+}
+
+const state = {
+  sessionCode: null, pollData: null, settings: null,
+  userHasVoted: false, selectedOptions: new Set(),
+  isAdmin: false, view: 'vote', unsubscribe: null, settingsUnsubscribe: null,
+  currentQuestionIndex: 0, voterAnswers: {}, expandedQuestionId: null, validationErrors: new Set(),
+  trainerAxisRatings: {}, trainerComment: ''
+};
+const deviceId = getOrCreateDeviceId();
+
+// Helper: migrate old polls to new format (questions array)
+function migratePoll(poll) {
+  if (!poll) return poll;
+  if (!poll.questions && poll.options) {
+    // Old format: convert to new format with single question
+    poll.questions = [{
+      id: 'q_' + Date.now(),
+      title: poll.title || 'ما هو سؤال التصويت؟',
+      voteType: poll.voteType || 'single',
+      required: true,
+      options: poll.options
+    }];
+  }
+  if (!poll.questions) poll.questions = [];
+  return poll;
+}
+
+async function loadSettings() {
+  try {
+    const snap = await db.ref('appSettings').once('value');
+    const s = snap.val() || {};
+    state.settings = {
+      appName: s.appName || 'تطبيق التصويت التفاعلي',
+      trainerName: s.trainerName || '',
+      adminPassword: s.adminPassword || DEFAULT_PASSWORD,
+      colorPreset: s.colorPreset || 'royal-teal',
+      customPrimary: s.customPrimary || '',
+      customAccent: s.customAccent || '',
+      useCustomColors: s.useCustomColors || false,
+      logoUrl: s.logoUrl || '',
+      defaultHeader: s.defaultHeader || 'استطلاع رأي',
+      defaultQuestion: s.defaultQuestion || 'ما هو سؤال التصويت؟',
+      voterHint: s.voterHint || 'اضغط للتصويت ←',
+      submitButtonText: s.submitButtonText || 'تأكيد الإجابة',
+      thankYouMessage: s.thankYouMessage || 'شكراً لك! تم تسجيل إجاباتك',
+      // إعدادات تقييم المدرب
+      trainerRatingTitle: s.trainerRatingTitle || 'تقييم المدرب',
+      trainerRatingSubtitle: s.trainerRatingSubtitle || 'قيّم أداء المدرب على المحاور التالية',
+      trainerRatingAxes: s.trainerRatingAxes || ['الإلقاء والتقديم', 'وضوح المحتوى', 'التفاعل مع المتدربين', 'إدارة الوقت', 'التقييم العام'],
+      enableTrainerComment: s.enableTrainerComment !== undefined ? s.enableTrainerComment : true,
+      trainerCommentLabel: s.trainerCommentLabel || 'ملاحظات أو اقتراحات (اختياري)',
+      trainerCommentPlaceholder: s.trainerCommentPlaceholder || 'شاركنا رأيك لتحسين التجربة...'
+    };
+  } catch (e) {
+    console.error('Settings load error:', e);
+    state.settings = { 
+      appName: 'تطبيق التصويت التفاعلي', trainerName: '', adminPassword: DEFAULT_PASSWORD, 
+      colorPreset: 'royal-teal', useCustomColors: false, logoUrl: '', 
+      defaultHeader: 'استطلاع رأي', defaultQuestion: 'ما هو سؤال التصويت؟', 
+      voterHint: 'اضغط للتصويت ←', submitButtonText: 'تأكيد الإجابة', 
+      thankYouMessage: 'شكراً لك! تم تسجيل إجاباتك',
+      trainerRatingTitle: 'تقييم المدرب',
+      trainerRatingSubtitle: 'قيّم أداء المدرب على المحاور التالية',
+      trainerRatingAxes: ['الإلقاء والتقديم', 'وضوح المحتوى', 'التفاعل مع المتدربين', 'إدارة الوقت', 'التقييم العام'],
+      enableTrainerComment: true,
+      trainerCommentLabel: 'ملاحظات أو اقتراحات (اختياري)',
+      trainerCommentPlaceholder: 'شاركنا رأيك لتحسين التجربة...'
+    };
+  }
+  document.title = state.settings.appName;
+  if (state.settings.useCustomColors && state.settings.customPrimary) applyColors({ mode: 'dark' }, state.settings.customPrimary, state.settings.customAccent);
+  else applyColors(COLOR_PRESETS[state.settings.colorPreset] || COLOR_PRESETS['royal-teal']);
+}
+
+async function saveSettings(updates) {
+  try { await db.ref('appSettings').update(updates); Object.assign(state.settings, updates); return true; }
+  catch (e) { console.error('Settings save error:', e); return false; }
+}
+
+function listenToSettings() {
+  if (state.settingsUnsubscribe) state.settingsUnsubscribe();
+  const ref = db.ref('appSettings');
+  const handler = (snap) => {
+    const s = snap.val() || {};
+    if (s && Object.keys(s).length) {
+      state.settings = { ...state.settings, ...s };
+      document.title = state.settings.appName;
+      if (state.settings.useCustomColors && state.settings.customPrimary) applyColors({ mode: 'dark' }, state.settings.customPrimary, state.settings.customAccent);
+      else applyColors(COLOR_PRESETS[state.settings.colorPreset] || COLOR_PRESETS['royal-teal']);
+    }
+  };
+  ref.on('value', handler);
+  state.settingsUnsubscribe = () => ref.off('value', handler);
+}
+
+async function createNewPoll() {
+  const code = generateCode();
+  const qid = 'q_' + Date.now();
+  const newPoll = {
+    headerTitle: state.settings.defaultHeader,
+    questions: [{
+      id: qid,
+      title: state.settings.defaultQuestion,
+      voteType: 'single',
+      required: true,
+      options: [
+        { id: 'o1', text: 'الخيار الأول', votes: 0 },
+        { id: 'o2', text: 'الخيار الثاني', votes: 0 }
+      ]
+    }],
+    enableTrainerRating: false,
+    trainerRatings: {},
+    totalVoters: 0,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    voters: {}
+  };
+  await db.ref('polls/' + code).set(newPoll);
+  return code;
+}
+
+async function loadPoll(code) { const snap = await db.ref('polls/' + code).once('value'); return migratePoll(snap.val()); }
+function listenToPoll(code, callback) { const ref = db.ref('polls/' + code); const handler = (snap) => callback(migratePoll(snap.val())); ref.on('value', handler); return () => ref.off('value', handler); }
+async function checkIfVoted(code) { const snap = await db.ref(`polls/${code}/voters/${deviceId}`).once('value'); return snap.exists(); }
+
+async function submitAllAnswers(code, answers, trainerRating) {
+  const pollSnap = await db.ref('polls/' + code).once('value');
+  const poll = migratePoll(pollSnap.val());
+  if (!poll) throw new Error('الاستبيان غير موجود');
+  if (poll.voters && poll.voters[deviceId]) throw new Error('لقد صوّتت بالفعل من هذا الجهاز');
+  
+  // Increment votes for each answered question
+  poll.questions = poll.questions.map(q => {
+    const answerIds = answers[q.id];
+    if (!answerIds || answerIds.length === 0) return q;
+    return {
+      ...q,
+      options: q.options.map(o => {
+        if (answerIds.includes(o.id)) return { ...o, votes: (o.votes || 0) + 1 };
+        return o;
+      })
+    };
+  });
+  poll.totalVoters = (poll.totalVoters || 0) + 1;
+  poll.voters = poll.voters || {};
+  poll.voters[deviceId] = { answers, at: Date.now() };
+  
+  // Save trainer rating if provided
+  if (trainerRating && poll.enableTrainerRating) {
+    poll.trainerRatings = poll.trainerRatings || {};
+    poll.trainerRatings[deviceId] = { ...trainerRating, at: Date.now() };
+  }
+  
+  await db.ref('polls/' + code).set(poll);
+}
+
+async function updatePoll(code, data) { data.updatedAt = Date.now(); await db.ref('polls/' + code).update(data); }
+async function resetVotes(code) {
+  const snap = await db.ref('polls/' + code).once('value');
+  const poll = migratePoll(snap.val());
+  if (!poll) return;
+  poll.questions = poll.questions.map(q => ({ ...q, options: q.options.map(o => ({ ...o, votes: 0 })) }));
+  poll.totalVoters = 0;
+  poll.voters = {};
+  poll.trainerRatings = {};
+  poll.updatedAt = Date.now();
+  await db.ref('polls/' + code).set(poll);
+}
+
+async function route() {
+  const params = getUrlParams();
+  if (params.view === 'projection' && params.session) { renderProjection(params.session); return; }
+  if (params.session && !params.admin) {
+    state.sessionCode = params.session;
+    state.userHasVoted = await checkIfVoted(params.session);
+    state.view = 'vote'; state.currentQuestionIndex = 0; state.voterAnswers = {}; state.selectedOptions = new Set(); state.validationErrors = new Set();
+    state.trainerAxisRatings = {}; state.trainerComment = '';
+    listenPoll();
+    return;
+  }
+  if (params.admin || !params.session) {
+    if (!state.isAdmin) { renderLogin(); return; }
+    if (!params.session) { renderCreateOrJoin(); return; }
+    state.sessionCode = params.session; state.view = 'admin';
+    listenPoll();
+    return;
+  }
+}
+
+function listenPoll() {
+  if (state.unsubscribe) state.unsubscribe();
+  state.unsubscribe = listenToPoll(state.sessionCode, (data) => {
+    if (!data) {
+      document.getElementById('root').innerHTML = `<div class="container"><div class="card"><div class="status-msg status-error">الاستبيان غير موجود أو تم حذفه</div><button class="primary-btn" onclick="window.location.href='${buildUrl({admin:1})}'" style="width:100%;margin-top:1rem;">العودة للوحة التحكم</button></div></div>`;
+      return;
+    }
+    state.pollData = data;
+    if (state.view === 'admin') renderAdminView();
+    else renderVoteView();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LOGIN + CREATE/JOIN
+// ═══════════════════════════════════════════════════════════════
+function renderLogin() {
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="login-card">
+        <div class="login-icon">🔒</div>
+        <h1 class="login-title">لوحة تحكم المشرف</h1>
+        <p class="login-subtitle">أدخل كلمة المرور للدخول</p>
+        <input type="password" id="pwd" class="input-field" placeholder="كلمة المرور" style="text-align:center;direction:ltr;" onkeydown="if(event.key==='Enter')doLogin()" />
+        <div id="login-err"></div>
+        <button class="primary-btn" style="width:100%;margin-top:8px;" onclick="doLogin()">دخول</button>
+      </div>
+      ${state.settings.trainerName ? `<div class="app-footer">${escapeHtml(state.settings.trainerName)}</div>` : ''}
+    </div>`;
+  setTimeout(() => document.getElementById('pwd')?.focus(), 100);
+}
+window.doLogin = function() {
+  const pwd = document.getElementById('pwd').value;
+  if (pwd === state.settings.adminPassword) {
+    state.isAdmin = true; sessionStorage.setItem('is-admin', '1'); route();
+  } else {
+    document.getElementById('login-err').innerHTML = '<div class="status-msg status-error">كلمة المرور خاطئة</div>';
+  }
+};
+
+function renderCreateOrJoin() {
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="main-header">
+        ${state.settings.logoUrl ? `<img src="${escapeHtml(state.settings.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">لوحة تحكم المشرف</div>
+        <h1 class="main-header-title">مرحباً بك 👋</h1>
+      </div>
+      <div class="card">
+        <h3 class="admin-section-title">إنشاء استبيان جديد</h3>
+        <p style="color:var(--c-text-muted);font-size:14px;margin-bottom:1rem;line-height:1.7;">
+          سيتم إنشاء استبيان جديد برمز فريد، ويمكنك بعدها إضافة عدة أسئلة بأنواع تصويت مختلفة ومشاركة الرابط مع المتدربين.
+        </p>
+        <button class="primary-btn" style="width:100%;" onclick="doCreatePoll()">+ إنشاء استبيان جديد</button>
+      </div>
+      <div class="card">
+        <h3 class="admin-section-title">📚 أرشيف الاستبيانات السابقة</h3>
+        <p style="color:var(--c-text-muted);font-size:14px;margin-bottom:1rem;line-height:1.7;">
+          استعرض كل الاستبيانات التي أنشأتها، اطلع على نتائجها، وصدّرها كـ PDF أو Excel بتصميم احترافي.
+        </p>
+        <button class="primary-btn" style="width:100%;background:linear-gradient(135deg, var(--c-accent) 0%, var(--c-primary) 100%);" onclick="openArchive()">📚 فتح الأرشيف</button>
+      </div>
+      <div class="card">
+        <h3 class="admin-section-title">الانضمام لاستبيان موجود</h3>
+        <label class="field-label">رمز الاستبيان</label>
+        <input type="text" id="join-code" class="input-field" placeholder="ABC12" maxlength="5" style="text-align:center;font-family:'Courier New',monospace;letter-spacing:8px;font-size:22px;text-transform:uppercase;" />
+        <button class="secondary-btn" onclick="doJoinPoll()">فتح لوحة التحكم</button>
+      </div>
+      <div class="card">
+        <div class="settings-section-header" onclick="toggleSettings()" id="settings-toggle">
+          <h3 class="admin-section-title" style="margin:0;padding:0;border:none;">⚙️ الإعدادات المتقدمة</h3>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="settings-content" id="settings-content">${renderSettingsContent()}</div>
+      </div>
+      <button class="danger-btn" style="width:100%;margin-top:1rem;" onclick="doLogout()">خروج</button>
+      ${state.settings.trainerName ? `<div class="app-footer">${escapeHtml(state.settings.trainerName)}</div>` : ''}
+    </div>`;
+}
+
+window.doCreatePoll = async function() {
+  try { const code = await createNewPoll(); window.location.href = buildUrl({ s: code, admin: 1 }); }
+  catch (e) { console.error(e); showToast('فشل الإنشاء: ' + e.message, 'error'); }
+};
+window.doJoinPoll = function() {
+  const code = document.getElementById('join-code').value.trim().toUpperCase();
+  if (!code || code.length !== 5) { showToast('أدخل رمزاً صحيحاً من 5 أحرف', 'error'); return; }
+  window.location.href = buildUrl({ s: code, admin: 1 });
+};
+window.doLogout = function() { state.isAdmin = false; sessionStorage.removeItem('is-admin'); window.location.href = buildUrl(); };
+
+// ═══════════════════════════════════════════════════════════════
+// SETTINGS PANEL
+// ═══════════════════════════════════════════════════════════════
+function renderSettingsContent() {
+  const s = state.settings;
+  let presetsHtml = '';
+  Object.entries(COLOR_PRESETS).forEach(([key, p]) => {
+    const isSelected = !s.useCustomColors && s.colorPreset === key;
+    presetsHtml += `
+      <div class="color-preset ${isSelected ? 'selected' : ''}" onclick="selectColorPreset('${key}')">
+        <div class="color-preset-swatch">
+          <div style="background:${p.primary};"></div>
+          <div style="background:${p.accent};"></div>
+        </div>
+        <div class="color-preset-name">${p.name}</div>
+        <div class="color-preset-desc">${p.desc}</div>
+      </div>`;
+  });
+  return `
+    <label class="field-label">✏️ اسم التطبيق (يظهر في التبويب)</label>
+    <input type="text" class="input-field" id="s-app-name" value="${escapeHtml(s.appName)}" placeholder="تطبيق التصويت التفاعلي" />
+    <label class="field-label" style="margin-top:1rem;">👤 اسم المدرب/المشرف (يظهر في التذييل)</label>
+    <input type="text" class="input-field" id="s-trainer" value="${escapeHtml(s.trainerName)}" placeholder="مثال: خالد الحكمي · مركز التدريب" />
+    <label class="field-label" style="margin-top:1rem;">🖼️ شعار المركز/الشركة (اختياري)</label>
+    <div class="logo-upload">
+      <div class="logo-preview" id="logo-preview">${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" alt="logo">` : '🖼️'}</div>
+      <label class="logo-upload-label">
+        <input type="file" accept="image/*" onchange="handleLogoUpload(event)" />
+        ${s.logoUrl ? 'تغيير الشعار' : 'رفع شعار'}
+      </label>
+      ${s.logoUrl ? `<button class="logo-remove-btn" onclick="removeLogo()">حذف</button>` : ''}
+    </div>
+    <p style="font-size:11px;color:var(--c-text-dim);margin-top:6px;">الحد الأقصى: 500 كيلوبايت — يُفضّل PNG شفاف</p>
+    <label class="field-label" style="margin-top:1.25rem;">🎨 لوحة الألوان</label>
+    <div class="color-preset-grid">${presetsHtml}</div>
+    <div style="padding:12px;background:var(--c-bg-input);border-radius:10px;border:1px solid var(--c-border);margin-top:10px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--c-text-main);">
+        <input type="checkbox" id="s-use-custom" ${s.useCustomColors ? 'checked' : ''} onchange="toggleCustomColors(this.checked)" style="accent-color:var(--c-accent);" />
+        استخدم ألوان مخصصة
+      </label>
+      <div id="custom-colors-wrap" style="${s.useCustomColors ? '' : 'display:none;'}margin-top:10px;">
+        <div class="color-picker-row">
+          <div class="color-picker-item"><label>اللون الأساسي</label><input type="color" id="s-primary" value="${s.customPrimary || '#1e5fc9'}" /></div>
+          <div class="color-picker-item"><label>اللون المساعد</label><input type="color" id="s-accent" value="${s.customAccent || '#0ea5b5'}" /></div>
+        </div>
+      </div>
+    </div>
+    <label class="field-label" style="margin-top:1.25rem;">🔑 كلمة مرور لوحة التحكم</label>
+    <input type="password" class="input-field" id="s-password" value="${escapeHtml(s.adminPassword)}" placeholder="كلمة المرور" style="direction:ltr;text-align:right;" />
+    <p style="font-size:11px;color:var(--c-text-dim);margin-top:-6px;margin-bottom:10px;">⚠️ احرص على حفظها في مكان آمن</p>
+    <label class="field-label" style="margin-top:1rem;">📝 العنوان الافتراضي للاستبيان الجديد</label>
+    <input type="text" class="input-field" id="s-default-header" value="${escapeHtml(s.defaultHeader)}" placeholder="استطلاع رأي" />
+    <label class="field-label" style="margin-top:1rem;">❓ السؤال الافتراضي</label>
+    <input type="text" class="input-field" id="s-default-q" value="${escapeHtml(s.defaultQuestion)}" placeholder="ما هو سؤال التصويت؟" />
+    <label class="field-label" style="margin-top:1rem;">👆 نص تلميح التصويت</label>
+    <input type="text" class="input-field" id="s-voter-hint" value="${escapeHtml(s.voterHint)}" placeholder="اضغط للتصويت ←" />
+    <label class="field-label" style="margin-top:1rem;">✅ نص زر تأكيد الإجابة</label>
+    <input type="text" class="input-field" id="s-submit-text" value="${escapeHtml(s.submitButtonText)}" placeholder="تأكيد الإجابة" />
+    <label class="field-label" style="margin-top:1rem;">🎉 رسالة الشكر بعد الإنتهاء</label>
+    <input type="text" class="input-field" id="s-thanks" value="${escapeHtml(s.thankYouMessage)}" placeholder="شكراً لك! تم تسجيل إجاباتك" />
+    
+    <div style="margin-top:1.5rem;padding:14px;background:var(--c-bg-input);border:1px solid var(--c-border);border-radius:12px;">
+      <h4 style="font-size:14px;font-weight:600;color:var(--c-warning);margin-bottom:10px;display:flex;align-items:center;gap:6px;">⭐ إعدادات تقييم المدرب</h4>
+      <p style="font-size:12px;color:var(--c-text-muted);margin-bottom:12px;line-height:1.6;">
+        تُطبَّق على كل الاستبيانات. يمكنك تفعيل/تعطيل التقييم لكل استبيان من لوحته.
+      </p>
+      
+      <label class="field-label">عنوان قسم التقييم</label>
+      <input type="text" class="input-field" id="s-tr-title" value="${escapeHtml(s.trainerRatingTitle)}" placeholder="تقييم المدرب" />
+      
+      <label class="field-label" style="margin-top:0.75rem;">وصف قصير (يظهر تحت العنوان)</label>
+      <input type="text" class="input-field" id="s-tr-subtitle" value="${escapeHtml(s.trainerRatingSubtitle)}" placeholder="قيّم أداء المدرب على المحاور التالية" />
+      
+      <label class="field-label" style="margin-top:0.75rem;">محاور التقييم (حد أقصى 8)</label>
+      <div id="trainer-axes-list">${renderAxesEditList(s.trainerRatingAxes)}</div>
+      <button class="secondary-btn" style="margin-top:6px;" onclick="addTrainerAxis()">+ إضافة محور</button>
+      
+      <div style="padding:10px;background:var(--c-bg-main);border-radius:8px;border:1px solid var(--c-border);margin-top:1rem;">
+        <label class="toggle-switch" style="width:100%;justify-content:space-between;">
+          <span class="toggle-label">تفعيل خانة التعليق النصي (اختياري للمتدرب)</span>
+          <input type="checkbox" id="s-tr-enable-comment" ${s.enableTrainerComment ? 'checked' : ''} />
+        </label>
+      </div>
+      
+      <label class="field-label" style="margin-top:0.75rem;">نص عنوان خانة التعليق</label>
+      <input type="text" class="input-field" id="s-tr-comment-label" value="${escapeHtml(s.trainerCommentLabel)}" placeholder="ملاحظات أو اقتراحات (اختياري)" />
+      
+      <label class="field-label" style="margin-top:0.75rem;">نص وهمي داخل خانة التعليق</label>
+      <input type="text" class="input-field" id="s-tr-comment-placeholder" value="${escapeHtml(s.trainerCommentPlaceholder)}" placeholder="شاركنا رأيك لتحسين التجربة..." />
+    </div>
+    
+    <div class="btn-row" style="margin-top:1.5rem;">
+      <button class="primary-btn" style="flex:1;" onclick="doSaveSettings()">💾 حفظ الإعدادات</button>
+      <button class="danger-btn" onclick="doResetSettings()">استعادة الافتراضي</button>
+    </div>
+    <p class="tip-note">💡 جميع الإعدادات تُحفظ في قاعدة بياناتك وتنطبق على كل الاستبيانات. التغييرات تظهر فوراً.</p>
+  `;
+}
+
+// Render editable list of axes for settings
+function renderAxesEditList(axes) {
+  let html = '';
+  (axes || []).forEach((ax, i) => {
+    html += `
+      <div class="axis-edit-row">
+        <input type="text" class="input-field" value="${escapeHtml(ax)}" data-axis-idx="${i}" placeholder="اسم المحور ${i + 1}" />
+        <button class="icon-btn" onclick="removeTrainerAxis(${i})" title="حذف">×</button>
+      </div>`;
+  });
+  return html;
+}
+
+window.addTrainerAxis = function() {
+  // Collect current values from DOM
+  const inputs = document.querySelectorAll('#trainer-axes-list input[data-axis-idx]');
+  const current = Array.from(inputs).map(inp => inp.value.trim());
+  if (current.length >= 8) { showToast('الحد الأقصى 8 محاور', 'error'); return; }
+  current.push('');
+  state.settings.trainerRatingAxes = current;
+  const list = document.getElementById('trainer-axes-list');
+  if (list) list.innerHTML = renderAxesEditList(current);
+};
+
+window.removeTrainerAxis = function(idx) {
+  const inputs = document.querySelectorAll('#trainer-axes-list input[data-axis-idx]');
+  const current = Array.from(inputs).map(inp => inp.value.trim());
+  if (current.length <= 1) { showToast('يجب أن يكون هناك محور واحد على الأقل', 'error'); return; }
+  current.splice(idx, 1);
+  state.settings.trainerRatingAxes = current;
+  const list = document.getElementById('trainer-axes-list');
+  if (list) list.innerHTML = renderAxesEditList(current);
+};
+
+window.toggleSettings = function() {
+  const header = document.getElementById('settings-toggle');
+  const content = document.getElementById('settings-content');
+  header.classList.toggle('open'); content.classList.toggle('open');
+};
+window.selectColorPreset = function(key) {
+  state.settings.colorPreset = key; state.settings.useCustomColors = false;
+  applyColors(COLOR_PRESETS[key]);
+  const content = document.getElementById('settings-content');
+  if (content) content.innerHTML = renderSettingsContent();
+  content.classList.add('open'); document.getElementById('settings-toggle').classList.add('open');
+};
+window.toggleCustomColors = function(checked) {
+  document.getElementById('custom-colors-wrap').style.display = checked ? 'block' : 'none';
+  state.settings.useCustomColors = checked;
+  if (!checked) applyColors(COLOR_PRESETS[state.settings.colorPreset] || COLOR_PRESETS['royal-teal']);
+  else {
+    const p = document.getElementById('s-primary')?.value || '#1e5fc9';
+    const a = document.getElementById('s-accent')?.value || '#0ea5b5';
+    applyColors({ mode: 'dark' }, p, a);
+  }
+};
+window.handleLogoUpload = function(e) {
+  const file = e.target.files[0]; if (!file) return;
+  if (file.size > 500 * 1024) { showToast('الحد الأقصى للشعار 500 كيلوبايت', 'error'); return; }
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    state.settings.logoUrl = evt.target.result;
+    document.getElementById('logo-preview').innerHTML = `<img src="${evt.target.result}" alt="logo">`;
+    showToast('تم اختيار الشعار — اضغط حفظ الإعدادات لتطبيقه');
+  };
+  reader.readAsDataURL(file);
+};
+window.removeLogo = function() {
+  state.settings.logoUrl = '';
+  const content = document.getElementById('settings-content');
+  if (content) content.innerHTML = renderSettingsContent();
+  content.classList.add('open'); document.getElementById('settings-toggle').classList.add('open');
+  showToast('تم حذف الشعار — اضغط حفظ الإعدادات للتأكيد');
+};
+window.doSaveSettings = async function() {
+  // Collect axes from inputs
+  const axesInputs = document.querySelectorAll('#trainer-axes-list input[data-axis-idx]');
+  const axes = Array.from(axesInputs).map(inp => inp.value.trim()).filter(v => v.length > 0);
+  if (axes.length === 0) { showToast('يجب إدخال محور تقييم واحد على الأقل', 'error'); return; }
+  
+  const updates = {
+    appName: document.getElementById('s-app-name').value.trim() || 'تطبيق التصويت التفاعلي',
+    trainerName: document.getElementById('s-trainer').value.trim(),
+    adminPassword: document.getElementById('s-password').value || DEFAULT_PASSWORD,
+    colorPreset: state.settings.colorPreset,
+    useCustomColors: document.getElementById('s-use-custom').checked,
+    customPrimary: document.getElementById('s-primary').value,
+    customAccent: document.getElementById('s-accent').value,
+    logoUrl: state.settings.logoUrl || '',
+    defaultHeader: document.getElementById('s-default-header').value.trim() || 'استطلاع رأي',
+    defaultQuestion: document.getElementById('s-default-q').value.trim() || 'ما هو سؤال التصويت؟',
+    voterHint: document.getElementById('s-voter-hint').value.trim() || 'اضغط للتصويت ←',
+    submitButtonText: document.getElementById('s-submit-text').value.trim() || 'تأكيد الإجابة',
+    thankYouMessage: document.getElementById('s-thanks').value.trim() || 'شكراً لك! تم تسجيل إجاباتك',
+    trainerRatingTitle: document.getElementById('s-tr-title').value.trim() || 'تقييم المدرب',
+    trainerRatingSubtitle: document.getElementById('s-tr-subtitle').value.trim() || 'قيّم أداء المدرب على المحاور التالية',
+    trainerRatingAxes: axes,
+    enableTrainerComment: document.getElementById('s-tr-enable-comment').checked,
+    trainerCommentLabel: document.getElementById('s-tr-comment-label').value.trim() || 'ملاحظات أو اقتراحات (اختياري)',
+    trainerCommentPlaceholder: document.getElementById('s-tr-comment-placeholder').value.trim() || 'شاركنا رأيك لتحسين التجربة...'
+  };
+  const success = await saveSettings(updates);
+  if (success) {
+    showToast('✅ تم حفظ الإعدادات بنجاح'); document.title = updates.appName;
+    if (updates.useCustomColors) applyColors({ mode: 'dark' }, updates.customPrimary, updates.customAccent);
+    else applyColors(COLOR_PRESETS[updates.colorPreset]);
+  } else showToast('فشل الحفظ، حاول مرة أخرى', 'error');
+};
+window.doResetSettings = async function() {
+  if (!confirm('هل تريد استعادة جميع الإعدادات الافتراضية؟')) return;
+  const defaults = { 
+    appName: 'تطبيق التصويت التفاعلي', trainerName: '', adminPassword: DEFAULT_PASSWORD, 
+    colorPreset: 'royal-teal', useCustomColors: false, customPrimary: '', customAccent: '', 
+    logoUrl: '', defaultHeader: 'استطلاع رأي', defaultQuestion: 'ما هو سؤال التصويت؟', 
+    voterHint: 'اضغط للتصويت ←', submitButtonText: 'تأكيد الإجابة', 
+    thankYouMessage: 'شكراً لك! تم تسجيل إجاباتك',
+    trainerRatingTitle: 'تقييم المدرب',
+    trainerRatingSubtitle: 'قيّم أداء المدرب على المحاور التالية',
+    trainerRatingAxes: ['الإلقاء والتقديم', 'وضوح المحتوى', 'التفاعل مع المتدربين', 'إدارة الوقت', 'التقييم العام'],
+    enableTrainerComment: true,
+    trainerCommentLabel: 'ملاحظات أو اقتراحات (اختياري)',
+    trainerCommentPlaceholder: 'شاركنا رأيك لتحسين التجربة...'
+  };
+  await saveSettings(defaults);
+  applyColors(COLOR_PRESETS['royal-teal']);
+  renderCreateOrJoin();
+  showToast('✅ تم استعادة الإعدادات الافتراضية');
+};
+
+// ═══════════════════════════════════════════════════════════════
+// VOTER VIEW (Multi-Question!)
+// ═══════════════════════════════════════════════════════════════
+function renderVoteView() {
+  const poll = state.pollData;
+  if (!poll) return;
+  const questions = poll.questions || [];
+  const s = state.settings;
+  
+  if (questions.length === 0) {
+    document.getElementById('root').innerHTML = `
+      <div class="container">
+        <div class="main-header">
+          ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+          <div class="main-header-label">موضوع التصويت</div>
+          <h1 class="main-header-title">${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1>
+        </div>
+        <div class="card"><div class="empty-state">لا توجد أسئلة بعد. في انتظار المشرف لإضافة الأسئلة.</div></div>
+      </div>`;
+    return;
+  }
+  
+  // Show thank you + results if voted
+  if (state.userHasVoted) {
+    const totalVoters = poll.totalVoters || 0;
+    let resultsHtml = '';
+    questions.forEach((q, qIdx) => {
+      const questionTotal = q.options.reduce((sum, o) => sum + (o.votes || 0), 0);
+      const maxV = Math.max(...q.options.map(o => o.votes || 0), 1);
+      let optsHtml = '';
+      q.options.forEach(o => {
+        const pct = questionTotal > 0 ? Math.round(((o.votes || 0) / questionTotal) * 100) : 0;
+        const bw = questionTotal > 0 ? ((o.votes || 0) / maxV) : 0;
+        optsHtml += `<button class="option-btn" disabled style="padding:12px 14px;margin-bottom:8px;"><span class="bar-fill" style="transform:scaleX(${bw});"></span><span class="opt-text" style="font-size:14px;">${escapeHtml(o.text)}</span><span class="opt-count"><span class="percentage-badge">${pct}%</span><span>${o.votes || 0}</span></span></button>`;
+      });
+      resultsHtml += `<div class="question-result-card"><div class="question-result-title">${qIdx + 1}. ${escapeHtml(q.title)}</div>${optsHtml}</div>`;
+    });
+    
+    // Trainer rating summary (if enabled)
+    let trainerSummaryHtml = '';
+    if (poll.enableTrainerRating) {
+      const tstats = computeTrainerStats(poll, s);
+      if (tstats.totalRaters > 0) {
+        let axesBars = '';
+        tstats.axisStats.forEach(a => {
+          const pct = (a.avg / 5) * 100;
+          axesBars += `
+            <div class="axis-result-row">
+              <div class="axis-result-label">
+                <span class="axis-result-name">${escapeHtml(a.name)}</span>
+                <span class="axis-result-stats">${a.count > 0 ? a.avg.toFixed(2) + ' / 5' : '—'}</span>
+              </div>
+              <div class="axis-result-track"><div class="axis-result-fill" style="width:${pct}%;"></div></div>
+            </div>`;
+        });
+        trainerSummaryHtml = `
+          <div class="question-result-card" style="margin-top:1rem;border:1px solid rgba(245,158,11,0.3);">
+            <div class="question-result-title" style="color:var(--c-warning);">⭐ ${escapeHtml(s.trainerRatingTitle)}</div>
+            <div class="trainer-overall" style="margin-bottom:10px;">
+              <div class="trainer-overall-score">${tstats.overall.toFixed(2)}<small> / 5</small></div>
+              <div class="trainer-overall-info">
+                <div class="trainer-overall-stars">${buildStarsDisplay(tstats.overall)}</div>
+                <div class="trainer-overall-label">${tstats.totalRaters} ${tstats.totalRaters === 1 ? 'مقيّم' : 'مقيّمين'}</div>
+              </div>
+            </div>
+            ${axesBars}
+          </div>`;
+      }
+    }
+    
+    document.getElementById('root').innerHTML = `
+      <div class="container">
+        <div class="main-header">
+          ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+          <div class="main-header-label">موضوع التصويت</div>
+          <h1 class="main-header-title">${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1>
+        </div>
+        <div class="card">
+          <div class="status-msg status-success">${escapeHtml(s.thankYouMessage)}</div>
+          <div style="text-align:center;margin-bottom:1rem;"><span class="live-indicator"><span class="live-dot"></span>النتائج مباشرة</span></div>
+          <h2 class="poll-title" style="margin-bottom:1rem;">النتائج الإجمالية</h2>
+          ${resultsHtml}
+          ${trainerSummaryHtml}
+          <div class="total-count-badge">إجمالي المصوتين: ${totalVoters}</div>
+        </div>
+        ${s.trainerName ? `<div class="app-footer">${escapeHtml(s.trainerName)}</div>` : ''}
+      </div>`;
+    return;
+  }
+  
+  // Build all questions on one page
+  const answers = state.voterAnswers || {};
+  let questionsHtml = '';
+  
+  questions.forEach((q, qIdx) => {
+    const isMulti = q.voteType === 'multi';
+    const isOptional = !q.required;
+    const qAnswers = answers[q.id] || [];
+    const isAnswered = qAnswers.length > 0;
+    const hasError = state.validationErrors && state.validationErrors.has(q.id);
+    
+    let optsHtml = '';
+    q.options.forEach(opt => {
+      const isSelected = qAnswers.includes(opt.id);
+      optsHtml += `
+        <div class="voter-option ${isSelected ? 'selected' : ''}" onclick="voterToggle('${q.id}', '${opt.id}', ${isMulti})">
+          <div class="voter-option-indicator ${isMulti ? 'checkbox' : 'radio'}"></div>
+          <div class="voter-option-text">${escapeHtml(opt.text)}</div>
+        </div>`;
+    });
+    
+    const cardClass = hasError ? 'voter-question-card error' : (isAnswered ? 'voter-question-card answered' : 'voter-question-card');
+    
+    questionsHtml += `
+      <div class="${cardClass}" id="vq-${q.id}">
+        <div class="voter-question-header">
+          <div class="voter-question-num">${qIdx + 1}</div>
+          <div class="voter-question-title-wrap">
+            <div class="voter-question-title">${escapeHtml(q.title)}</div>
+            <div class="voter-question-meta">
+              <span class="voter-question-badge ${isMulti ? 'multi' : 'single'}">${isMulti ? 'اختيارات متعددة' : 'اختيار واحد'}</span>
+              <span class="voter-question-badge ${isOptional ? 'optional' : 'required'}">${isOptional ? 'اختياري' : 'إلزامي'}</span>
+              ${isAnswered ? '<span class="voter-question-badge answered-tag">✓ تمت الإجابة</span>' : ''}
+            </div>
+          </div>
+        </div>
+        ${optsHtml}
+      </div>`;
+  });
+  
+  // Summary counter
+  const answeredCount = Object.keys(answers).filter(k => answers[k] && answers[k].length > 0).length;
+  const requiredCount = questions.filter(q => q.required).length;
+  const requiredAnswered = questions.filter(q => q.required && answers[q.id] && answers[q.id].length > 0).length;
+  const allRequiredDone = requiredAnswered === requiredCount;
+  
+  // Build trainer rating card (if enabled)
+  let trainerRatingHtml = '';
+  if (poll.enableTrainerRating) {
+    const axes = s.trainerRatingAxes || [];
+    const ratings = state.trainerAxisRatings || {};
+    const anyRatingError = state.validationErrors && state.validationErrors.has('__trainer_rating__');
+    
+    let axesHtml = '';
+    axes.forEach((axisName, aIdx) => {
+      const axisKey = 'axis_' + aIdx;
+      const currentRating = ratings[axisKey] || 0;
+      let starsHtml = '';
+      for (let i = 1; i <= 5; i++) {
+        const isFilled = i <= currentRating;
+        starsHtml += `<button type="button" class="star-btn ${isFilled ? 'filled' : ''}" onclick="setAxisRating('${axisKey}', ${i})" aria-label="${i} نجوم">★</button>`;
+      }
+      axesHtml += `
+        <div class="rating-axis ${currentRating > 0 ? 'filled' : ''}">
+          <div class="rating-axis-label">
+            <span class="rating-axis-name">${escapeHtml(axisName)}</span>
+            ${currentRating > 0 ? `<span class="rating-axis-value">${currentRating} / 5</span>` : ''}
+          </div>
+          <div class="stars-row">${starsHtml}</div>
+        </div>`;
+    });
+    
+    const commentHtml = s.enableTrainerComment ? `
+      <div class="rating-comment-wrap">
+        <label class="rating-comment-label">${escapeHtml(s.trainerCommentLabel)}</label>
+        <textarea class="rating-comment" id="trainer-comment-input" placeholder="${escapeHtml(s.trainerCommentPlaceholder)}" oninput="state.trainerComment=this.value" maxlength="500">${escapeHtml(state.trainerComment || '')}</textarea>
+      </div>` : '';
+    
+    const cardClass = anyRatingError ? 'trainer-rating-card error' : (Object.keys(ratings).length > 0 ? 'trainer-rating-card answered' : 'trainer-rating-card');
+    
+    trainerRatingHtml = `
+      <div class="${cardClass}" id="trainer-rating-section">
+        <div class="trainer-rating-header">
+          <div class="trainer-rating-icon">⭐</div>
+          <div class="trainer-rating-title-wrap">
+            <div class="trainer-rating-title">${escapeHtml(s.trainerRatingTitle)}${s.trainerName ? ' — ' + escapeHtml(s.trainerName) : ''}</div>
+            <div class="trainer-rating-subtitle">${escapeHtml(s.trainerRatingSubtitle)}</div>
+          </div>
+        </div>
+        ${axesHtml}
+        ${commentHtml}
+      </div>`;
+  }
+  
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="main-header">
+        ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">موضوع التصويت</div>
+        <h1 class="main-header-title">${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1>
+      </div>
+      <div class="card">
+        <h2 class="poll-title" style="font-size:16px;margin-bottom:0.75rem;">
+          استبيان من ${questions.length} ${questions.length === 1 ? 'سؤال' : (questions.length === 2 ? 'سؤالين' : 'أسئلة')}
+          ${requiredCount > 0 ? `(منها ${requiredCount} إلزامي)` : ''}
+        </h2>
+        <p style="text-align:center;color:var(--c-text-muted);font-size:13px;margin-bottom:1rem;">
+          أجب على جميع الأسئلة أدناه${poll.enableTrainerRating ? '، قيّم المدرب' : ''}، ثم اضغط زر "إرسال الاستبيان" في الأسفل
+        </p>
+      </div>
+      ${questionsHtml}
+      ${trainerRatingHtml}
+      <div class="card">
+        <div class="submit-summary">
+          <span class="count-label">الأسئلة المجابة:</span>
+          <span class="count-value">${answeredCount} من ${questions.length}</span>
+        </div>
+        ${!allRequiredDone ? `<div class="status-msg" style="background:rgba(245,158,11,0.1);color:var(--c-warning);border:1px solid rgba(245,158,11,0.3);"><strong>⚠️ متبقي ${requiredCount - requiredAnswered} سؤال إلزامي للإجابة</strong></div>` : ''}
+        <button class="submit-all-btn" onclick="submitAllVoterAnswers()">
+          ✓ إرسال الاستبيان
+        </button>
+      </div>
+      ${s.trainerName ? `<div class="app-footer">${escapeHtml(s.trainerName)}</div>` : ''}
+    </div>`;
+}
+
+window.voterToggle = function(qid, oid, isMulti) {
+  if (!state.voterAnswers) state.voterAnswers = {};
+  if (!state.voterAnswers[qid]) state.voterAnswers[qid] = [];
+  
+  // Clear error state for this question
+  if (state.validationErrors) state.validationErrors.delete(qid);
+  
+  const current = state.voterAnswers[qid];
+  
+  if (isMulti) {
+    // Toggle
+    if (current.includes(oid)) {
+      state.voterAnswers[qid] = current.filter(id => id !== oid);
+    } else {
+      state.voterAnswers[qid] = [...current, oid];
+    }
+  } else {
+    // Single: if same -> deselect, else replace
+    if (current.length === 1 && current[0] === oid) {
+      state.voterAnswers[qid] = [];
+    } else {
+      state.voterAnswers[qid] = [oid];
+    }
+  }
+  
+  renderVoteView();
+};
+
+window.setAxisRating = function(axisKey, value) {
+  if (!state.trainerAxisRatings) state.trainerAxisRatings = {};
+  // If clicking the same value again, clear it (toggle)
+  if (state.trainerAxisRatings[axisKey] === value) {
+    delete state.trainerAxisRatings[axisKey];
+  } else {
+    state.trainerAxisRatings[axisKey] = value;
+  }
+  // Clear error state
+  if (state.validationErrors) state.validationErrors.delete('__trainer_rating__');
+  // Save the comment from input before re-render
+  const commentInput = document.getElementById('trainer-comment-input');
+  if (commentInput) state.trainerComment = commentInput.value;
+  renderVoteView();
+};
+
+window.submitAllVoterAnswers = async function() {
+  const poll = state.pollData;
+  const questions = poll.questions || [];
+  const answers = state.voterAnswers || {};
+  
+  // Save comment from input
+  const commentInput = document.getElementById('trainer-comment-input');
+  if (commentInput) state.trainerComment = commentInput.value;
+  
+  // Validate required questions
+  const missingQuestions = questions.filter(q => q.required && (!answers[q.id] || answers[q.id].length === 0));
+  
+  if (missingQuestions.length > 0) {
+    state.validationErrors = new Set(missingQuestions.map(q => q.id));
+    renderVoteView();
+    // Scroll to first missing
+    setTimeout(() => {
+      const firstErr = document.getElementById('vq-' + missingQuestions[0].id);
+      if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    showToast(`يرجى إجابة الأسئلة الإلزامية (${missingQuestions.length} سؤال)`, 'error');
+    return;
+  }
+  
+  // Validate trainer rating if enabled (at least one axis must be rated)
+  let trainerRatingPayload = null;
+  if (poll.enableTrainerRating) {
+    const ratings = state.trainerAxisRatings || {};
+    const ratedCount = Object.keys(ratings).length;
+    if (ratedCount === 0) {
+      state.validationErrors = new Set(['__trainer_rating__']);
+      renderVoteView();
+      setTimeout(() => {
+        const sec = document.getElementById('trainer-rating-section');
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+      showToast('يرجى تقييم المدرب قبل الإرسال', 'error');
+      return;
+    }
+    trainerRatingPayload = {
+      axes: { ...ratings },
+      comment: (state.trainerComment || '').trim().substring(0, 500)
+    };
+  }
+  
+  try {
+    // Clean answers: only include answered questions
+    const cleanedAnswers = {};
+    Object.keys(answers).forEach(qid => {
+      if (answers[qid] && answers[qid].length > 0) cleanedAnswers[qid] = answers[qid];
+    });
+    await submitAllAnswers(state.sessionCode, cleanedAnswers, trainerRatingPayload);
+    state.userHasVoted = true;
+    showToast(state.settings.thankYouMessage);
+  } catch (e) { showToast(e.message, 'error'); }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ADMIN VIEW
+// ═══════════════════════════════════════════════════════════════
+
+// Helper: compute trainer rating statistics
+function computeTrainerStats(poll, settings) {
+  const ratings = poll.trainerRatings || {};
+  const deviceIds = Object.keys(ratings);
+  const axes = settings.trainerRatingAxes || [];
+  const totalRaters = deviceIds.length;
+  
+  // Compute per-axis averages
+  const axisStats = axes.map((name, idx) => {
+    const key = 'axis_' + idx;
+    let sum = 0, count = 0;
+    deviceIds.forEach(did => {
+      const r = ratings[did];
+      if (r && r.axes && r.axes[key] != null) {
+        sum += Number(r.axes[key]) || 0;
+        count++;
+      }
+    });
+    const avg = count > 0 ? sum / count : 0;
+    return { name, idx, avg, count };
+  });
+  
+  // Overall average (average of axis averages for axes that have data)
+  const validAxes = axisStats.filter(a => a.count > 0);
+  const overall = validAxes.length > 0 ? validAxes.reduce((sum, a) => sum + a.avg, 0) / validAxes.length : 0;
+  
+  // Comments list (non-empty)
+  const comments = deviceIds
+    .map(did => ratings[did])
+    .filter(r => r && r.comment && r.comment.trim())
+    .sort((a, b) => (b.at || 0) - (a.at || 0));
+  
+  return { axisStats, overall, totalRaters, comments };
+}
+
+function buildStarsDisplay(value, max = 5) {
+  const rounded = Math.round(value * 2) / 2; // round to nearest 0.5
+  let html = '';
+  for (let i = 1; i <= max; i++) {
+    if (i <= rounded) html += '<span class="s-filled">★</span>';
+    else if (i - 0.5 === rounded) html += '<span class="s-filled">⯨</span>';
+    else html += '<span>☆</span>';
+  }
+  return html;
+}
+
+function renderAdminView() {
+  const poll = state.pollData;
+  if (!poll) return;
+  const totalVoters = poll.totalVoters || 0;
+  const questions = poll.questions || [];
+  const voterUrl = buildUrl({ s: state.sessionCode });
+  const projectionUrl = buildUrl({ s: state.sessionCode, v: 'projection' });
+  const s = state.settings;
+  
+  // Build results section
+  let resultsHtml = '';
+  if (questions.length === 0) {
+    resultsHtml = '<div class="empty-state">لا توجد أسئلة بعد</div>';
+  } else {
+    questions.forEach((q, qIdx) => {
+      const qTotal = q.options.reduce((sum, o) => sum + (o.votes || 0), 0);
+      const maxV = Math.max(...q.options.map(o => o.votes || 0), 1);
+      let bars = '';
+      q.options.forEach(o => {
+        const pct = qTotal > 0 ? Math.round(((o.votes || 0) / qTotal) * 100) : 0;
+        const bw = qTotal > 0 ? ((o.votes || 0) / maxV) * 100 : 0;
+        bars += `<div class="result-bar-container"><div class="result-bar-label"><span class="result-bar-name">${escapeHtml(o.text)}</span><span class="result-bar-stats">${o.votes || 0} · ${pct}%</span></div><div class="result-bar-track"><div class="result-bar-fill" style="width:${bw}%;"></div></div></div>`;
+      });
+      resultsHtml += `
+        <div class="question-result-card" style="margin-bottom:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="question-result-title" style="margin:0;">${qIdx + 1}. ${escapeHtml(q.title)}</div>
+            <span class="mini-badge ${q.voteType === 'multi' ? 'multi' : 'single'}">${q.voteType === 'multi' ? 'متعدد' : 'واحد'}</span>
+          </div>
+          ${bars}
+        </div>`;
+    });
+  }
+  
+  // Build questions management list
+  let questionsListHtml = '';
+  questions.forEach((q, qIdx) => {
+    const isExpanded = state.expandedQuestionId === q.id;
+    let editOptsHtml = '';
+    q.options.forEach((opt, oIdx) => {
+      editOptsHtml += `
+        <div class="option-row">
+          <input type="text" class="input-field" value="${escapeHtml(opt.text)}" id="qopt-${q.id}-${oIdx}" placeholder="البند ${oIdx + 1}" />
+          <button class="icon-btn" onclick="doRemoveOptionFromQuestion('${q.id}', ${oIdx})" title="حذف">×</button>
+        </div>`;
+    });
+    questionsListHtml += `
+      <div class="question-item ${isExpanded ? 'expanded' : ''}">
+        <div class="question-item-header" onclick="toggleQuestionExpand('${q.id}')">
+          <div class="question-item-title">
+            <div class="question-number-badge">${qIdx + 1}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="question-item-text">${escapeHtml(q.title)}</div>
+              <div style="display:flex;gap:4px;margin-top:4px;">
+                <span class="mini-badge ${q.voteType === 'multi' ? 'multi' : 'single'}">${q.voteType === 'multi' ? 'متعدد' : 'واحد'}</span>
+                <span class="mini-badge ${q.required ? 'required' : 'optional'}">${q.required ? 'إلزامي' : 'اختياري'}</span>
+              </div>
+            </div>
+          </div>
+          <div class="question-item-actions" onclick="event.stopPropagation()">
+            <button class="q-reorder-btn" onclick="doMoveQuestion('${q.id}', -1)" ${qIdx === 0 ? 'disabled' : ''} title="للأعلى">▲</button>
+            <button class="q-reorder-btn" onclick="doMoveQuestion('${q.id}', 1)" ${qIdx === questions.length - 1 ? 'disabled' : ''} title="للأسفل">▼</button>
+            <button class="q-delete-btn" onclick="doDeleteQuestion('${q.id}')" title="حذف">×</button>
+          </div>
+        </div>
+        <div class="question-item-body">
+          <label class="field-label">نص السؤال</label>
+          <input type="text" class="input-field" value="${escapeHtml(q.title)}" id="qtitle-${q.id}" placeholder="اكتب السؤال" />
+          
+          <label class="field-label" style="margin-top:1rem;">نوع التصويت</label>
+          <div class="vote-type-selector">
+            <label class="vote-type-option ${q.voteType === 'single' ? 'selected' : ''}" onclick="doChangeQuestionType('${q.id}', 'single')">
+              <div class="vote-type-title"><span class="check-circle"></span>اختيار واحد</div>
+              <div class="vote-type-desc">يختار المتدرب بنداً واحداً</div>
+            </label>
+            <label class="vote-type-option ${q.voteType === 'multi' ? 'selected' : ''}" onclick="doChangeQuestionType('${q.id}', 'multi')">
+              <div class="vote-type-title"><span class="check-circle"></span>اختيارات متعددة</div>
+              <div class="vote-type-desc">يختار المتدرب عدة بنود</div>
+            </label>
+          </div>
+          
+          <label class="field-label" style="margin-top:1rem;">الإلزامية</label>
+          <div style="padding:12px;background:var(--c-bg-main);border-radius:10px;border:1px solid var(--c-border);">
+            <label class="toggle-switch" style="width:100%;justify-content:space-between;">
+              <span class="toggle-label">${q.required ? 'السؤال إلزامي' : 'السؤال اختياري (يمكن تخطيه)'}</span>
+              <input type="checkbox" ${q.required ? 'checked' : ''} onchange="doToggleRequired('${q.id}', this.checked)" />
+            </label>
+          </div>
+          
+          <label class="field-label" style="margin-top:1rem;">البنود</label>
+          ${editOptsHtml}
+          <button class="secondary-btn" onclick="doAddOptionToQuestion('${q.id}')">+ إضافة بند</button>
+          
+          <button class="primary-btn" style="width:100%;margin-top:10px;" onclick="doSaveQuestion('${q.id}')">💾 حفظ تغييرات السؤال</button>
+        </div>
+      </div>`;
+  });
+  
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="main-header">
+        ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">موضوع التصويت</div>
+        <h1 class="main-header-title">${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1>
+        <div class="session-code-display">رمز الجلسة: ${state.sessionCode}</div>
+      </div>
+      
+      <div class="view-toggle">
+        <button class="tab-btn active">لوحة التحكم</button>
+        <button class="tab-btn" onclick="window.location.href='${buildUrl({admin:1})}'">+ جديد</button>
+        <button class="tab-btn" onclick="openArchive()">📚 الأرشيف</button>
+      </div>
+      
+      <div class="card">
+        <h3 class="admin-section-title">مشاركة الاستبيان مع المتدربين</h3>
+        <div class="qr-display">
+          <div style="font-size:14px;color:var(--c-accent);font-weight:600;margin-bottom:4px;">امسح الرمز أو شارك الرابط</div>
+          <div class="qr-code-wrap" id="qr-container"></div>
+          <div class="qr-link">${voterUrl}</div>
+          <button class="copy-btn" onclick="copyLink('${voterUrl}')">نسخ الرابط</button>
+          <a class="projection-btn" href="${projectionUrl}" target="_blank">عرض QR على شاشة كبيرة ↗</a>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3 class="admin-section-title">عنوان الاستبيان</h3>
+        <label class="field-label">العنوان الرئيسي</label>
+        <input type="text" class="input-field" id="edit-header" value="${escapeHtml(poll.headerTitle || '')}" placeholder="${escapeHtml(s.defaultHeader)}" />
+        <button class="primary-btn" style="width:100%;" onclick="doSaveHeader()">💾 حفظ العنوان</button>
+      </div>
+      
+      <div class="card">
+        <div class="admin-header">
+          <h3 class="admin-section-title">النتائج المباشرة</h3>
+          <span class="live-indicator"><span class="live-dot"></span>مباشر</span>
+        </div>
+        <div class="stats-row">
+          <div class="metric"><div class="metric-label">عدد المصوتين</div><div class="metric-value">${totalVoters}</div></div>
+          <div class="metric"><div class="metric-label">عدد الأسئلة</div><div class="metric-value">${questions.length}</div></div>
+        </div>
+        ${resultsHtml}
+      </div>
+      
+      ${buildTrainerRatingAdminCard(poll, s)}
+      
+      <div class="card">
+        <h3 class="admin-section-title">⭐ تقييم المدرب</h3>
+        <div class="toggle-enable-rating">
+          <label class="toggle-switch" style="width:100%;justify-content:space-between;">
+            <span class="toggle-label"><strong>${poll.enableTrainerRating ? 'تقييم المدرب مُفعّل' : 'تقييم المدرب مُعطَّل'}</strong><br><span style="font-size:12px;color:var(--c-text-muted);">${poll.enableTrainerRating ? 'سيظهر للمتدربين قسم تقييم المدرب بالنجوم' : 'فعّل الخيار لعرض قسم تقييم المدرب للمتدربين'}</span></span>
+            <input type="checkbox" ${poll.enableTrainerRating ? 'checked' : ''} onchange="doToggleTrainerRating(this.checked)" />
+          </label>
+        </div>
+        <p class="tip-note">💡 يمكنك تخصيص محاور التقييم ونص التعليق من "الإعدادات المتقدمة" بالأسفل. المحاور تنطبق على كل الاستبيانات.</p>
+      </div>
+      
+      <div class="card">
+        <h3 class="admin-section-title">إدارة الأسئلة (${questions.length})</h3>
+        ${questionsListHtml || '<div class="empty-state">لا توجد أسئلة. أضف سؤالك الأول بالأسفل.</div>'}
+        <button class="secondary-btn" style="margin-top:1rem;" onclick="doAddQuestion()">+ إضافة سؤال جديد</button>
+        <div class="btn-row">
+          <button class="danger-btn" style="width:100%;" onclick="doResetVotes()">تصفير جميع الأصوات</button>
+        </div>
+      </div>
+      
+      <div class="card">
+        <h3 class="admin-section-title">تصدير النتائج</h3>
+        <div class="export-row">
+          <button class="export-btn export-btn-pdf" onclick="showExportModal('pdf')">
+            <span style="font-weight:700;">PDF</span><span>تصدير</span>
+          </button>
+          <button class="export-btn export-btn-excel" onclick="showExportModal('excel')">
+            <span style="font-weight:700;">XLS</span><span>تصدير Excel</span>
+          </button>
+        </div>
+        <p class="tip-note">يمكنك اختيار "تقرير شامل" لكل الأسئلة في ملف واحد، أو "ملف لكل سؤال" لتحليل مفصّل.</p>
+      </div>
+      
+      <div class="card">
+        <div class="settings-section-header" onclick="toggleSettings()" id="settings-toggle">
+          <h3 class="admin-section-title" style="margin:0;padding:0;border:none;">⚙️ الإعدادات المتقدمة</h3>
+          <span class="toggle-icon">▼</span>
+        </div>
+        <div class="settings-content" id="settings-content">${renderSettingsContent()}</div>
+      </div>
+      
+      <button class="danger-btn" style="width:100%;" onclick="doLogout()">خروج من لوحة التحكم</button>
+      ${s.trainerName ? `<div class="app-footer">${escapeHtml(s.trainerName)}</div>` : ''}
+    </div>`;
+  
+  setTimeout(() => {
+    const container = document.getElementById('qr-container');
+    if (container && typeof QRCode !== 'undefined') {
+      container.innerHTML = '';
+      new QRCode(container, { text: voterUrl, width: 180, height: 180, colorDark: '#000', colorLight: '#ffffff' });
+    }
+  }, 50);
+}
+
+window.copyLink = function(url) { navigator.clipboard.writeText(url).then(() => showToast('تم نسخ الرابط')); };
+window.toggleQuestionExpand = function(qid) { state.expandedQuestionId = state.expandedQuestionId === qid ? null : qid; renderAdminView(); };
+
+// Build trainer rating results card for admin view
+function buildTrainerRatingAdminCard(poll, s) {
+  if (!poll.enableTrainerRating) return '';
+  
+  const stats = computeTrainerStats(poll, s);
+  
+  if (stats.totalRaters === 0) {
+    return `
+      <div class="card">
+        <div class="admin-header">
+          <h3 class="admin-section-title">⭐ نتائج تقييم المدرب</h3>
+          <span class="live-indicator"><span class="live-dot"></span>مباشر</span>
+        </div>
+        <div class="empty-state">لم يقم أي متدرب بالتقييم بعد</div>
+      </div>`;
+  }
+  
+  // Axes bars
+  let axesHtml = '';
+  stats.axisStats.forEach(a => {
+    const pct = (a.avg / 5) * 100;
+    axesHtml += `
+      <div class="axis-result-row">
+        <div class="axis-result-label">
+          <span class="axis-result-name">${escapeHtml(a.name)}</span>
+          <span class="axis-result-stats">${a.count > 0 ? a.avg.toFixed(2) + ' / 5' : '—'} ${a.count > 0 ? `· (${a.count})` : ''}</span>
+        </div>
+        <div class="axis-result-track"><div class="axis-result-fill" style="width:${pct}%;"></div></div>
+      </div>`;
+  });
+  
+  // Comments
+  let commentsHtml = '';
+  if (stats.comments.length > 0) {
+    let items = '';
+    stats.comments.slice(0, 20).forEach(c => {
+      const d = c.at ? new Date(c.at) : null;
+      const timeStr = d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')} · ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '';
+      items += `<div class="comment-item">"${escapeHtml(c.comment)}"<div class="comment-item-meta">${timeStr}</div></div>`;
+    });
+    commentsHtml = `
+      <div class="comments-section">
+        <div class="comments-section-title">💬 تعليقات المتدربين (${stats.comments.length})</div>
+        ${items}
+        ${stats.comments.length > 20 ? `<p style="text-align:center;font-size:12px;color:var(--c-text-muted);margin-top:8px;">...و ${stats.comments.length - 20} تعليق آخر (ظاهرة في ملف التصدير)</p>` : ''}
+      </div>`;
+  }
+  
+  return `
+    <div class="card">
+      <div class="admin-header">
+        <h3 class="admin-section-title">⭐ نتائج تقييم المدرب</h3>
+        <span class="live-indicator"><span class="live-dot"></span>مباشر</span>
+      </div>
+      <div class="trainer-overall">
+        <div class="trainer-overall-score">${stats.overall.toFixed(2)}<small> / 5</small></div>
+        <div class="trainer-overall-info">
+          <div class="trainer-overall-stars">${buildStarsDisplay(stats.overall)}</div>
+          <div class="trainer-overall-label">التقييم العام · ${stats.totalRaters} ${stats.totalRaters === 1 ? 'مقيّم' : 'مقيّمين'}</div>
+        </div>
+      </div>
+      ${axesHtml}
+      ${commentsHtml}
+    </div>`;
+}
+
+window.doToggleTrainerRating = async function(enabled) {
+  await db.ref(`polls/${state.sessionCode}/enableTrainerRating`).set(enabled);
+  showToast(enabled ? '✅ تم تفعيل تقييم المدرب' : 'تم إلغاء تقييم المدرب');
+};
+
+window.doAddQuestion = async function() {
+  const poll = state.pollData;
+  const qid = 'q_' + Date.now();
+  poll.questions = poll.questions || [];
+  poll.questions.push({
+    id: qid,
+    title: state.settings.defaultQuestion,
+    voteType: 'single',
+    required: true,
+    options: [
+      { id: 'o_' + Date.now() + '_1', text: 'الخيار الأول', votes: 0 },
+      { id: 'o_' + Date.now() + '_2', text: 'الخيار الثاني', votes: 0 }
+    ]
+  });
+  state.expandedQuestionId = qid;
+  await updatePoll(state.sessionCode, poll);
+  showToast('تم إضافة السؤال');
+};
+
+window.doDeleteQuestion = async function(qid) {
+  if (state.pollData.questions.length <= 1) {
+    showToast('يجب أن يحتوي الاستبيان على سؤال واحد على الأقل', 'error');
+    return;
+  }
+  if (!confirm('هل أنت متأكد من حذف هذا السؤال؟ سيُحذف مع كل أصواته.')) return;
+  const poll = state.pollData;
+  poll.questions = poll.questions.filter(q => q.id !== qid);
+  await updatePoll(state.sessionCode, poll);
+  showToast('تم حذف السؤال');
+};
+
+window.doMoveQuestion = async function(qid, direction) {
+  const poll = state.pollData;
+  const idx = poll.questions.findIndex(q => q.id === qid);
+  if (idx === -1) return;
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= poll.questions.length) return;
+  const temp = poll.questions[idx];
+  poll.questions[idx] = poll.questions[newIdx];
+  poll.questions[newIdx] = temp;
+  await updatePoll(state.sessionCode, poll);
+};
+
+window.doChangeQuestionType = async function(qid, type) {
+  const poll = state.pollData;
+  const q = poll.questions.find(q => q.id === qid);
+  if (!q) return;
+  q.voteType = type;
+  await updatePoll(state.sessionCode, poll);
+};
+
+window.doToggleRequired = async function(qid, checked) {
+  const poll = state.pollData;
+  const q = poll.questions.find(q => q.id === qid);
+  if (!q) return;
+  q.required = checked;
+  await updatePoll(state.sessionCode, poll);
+};
+
+window.doAddOptionToQuestion = async function(qid) {
+  const poll = state.pollData;
+  const q = poll.questions.find(q => q.id === qid);
+  if (!q) return;
+  q.options.push({ id: 'o_' + Date.now(), text: '', votes: 0 });
+  await updatePoll(state.sessionCode, poll);
+};
+
+window.doRemoveOptionFromQuestion = async function(qid, oIdx) {
+  const poll = state.pollData;
+  const q = poll.questions.find(q => q.id === qid);
+  if (!q) return;
+  if (q.options.length <= 2) { showToast('يجب أن يحتوي السؤال على بندين على الأقل', 'error'); return; }
+  q.options = q.options.filter((_, i) => i !== oIdx);
+  await updatePoll(state.sessionCode, poll);
+};
+
+window.doSaveQuestion = async function(qid) {
+  const poll = state.pollData;
+  const q = poll.questions.find(q => q.id === qid);
+  if (!q) return;
+  const titleEl = document.getElementById('qtitle-' + qid);
+  if (titleEl) q.title = titleEl.value.trim() || state.settings.defaultQuestion;
+  q.options = q.options.map((o, i) => {
+    const el = document.getElementById('qopt-' + qid + '-' + i);
+    return { ...o, text: el ? el.value.trim() : o.text, votes: 0 };
+  }).filter(o => o.text);
+  if (q.options.length < 2) { showToast('يلزم بندان على الأقل', 'error'); return; }
+  poll.totalVoters = 0;
+  poll.voters = {};
+  await updatePoll(state.sessionCode, poll);
+  showToast('تم حفظ السؤال وتصفير الأصوات');
+};
+
+window.doSaveHeader = async function() {
+  const el = document.getElementById('edit-header');
+  if (!el) return;
+  const val = el.value.trim();
+  if (!val) { showToast('أدخل العنوان', 'error'); return; }
+  await db.ref(`polls/${state.sessionCode}/headerTitle`).set(val);
+  showToast('تم حفظ العنوان');
+};
+
+window.doResetVotes = async function() {
+  if (!confirm('هل أنت متأكد من تصفير جميع الأصوات؟')) return;
+  await resetVotes(state.sessionCode);
+  showToast('تم تصفير الأصوات');
+};
+
+// ═══════════════════════════════════════════════════════════════
+// ARCHIVE (NEW!)
+// ═══════════════════════════════════════════════════════════════
+let archiveState = { polls: [], searchQuery: '', sortBy: 'newest' };
+
+window.openArchive = async function() {
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="main-header">
+        ${state.settings.logoUrl ? `<img src="${escapeHtml(state.settings.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">لوحة تحكم المشرف</div>
+        <h1 class="main-header-title">📚 أرشيف الاستبيانات</h1>
+      </div>
+      <div class="card"><div class="loading">جاري تحميل الاستبيانات...</div></div>
+    </div>`;
+  
+  try {
+    const snap = await db.ref('polls').once('value');
+    const data = snap.val() || {};
+    archiveState.polls = Object.entries(data).map(([code, poll]) => ({ code, ...migratePoll(poll) }));
+    renderArchive();
+  } catch (e) {
+    console.error('Archive load error:', e);
+    showToast('فشل تحميل الأرشيف', 'error');
+  }
+};
+
+function renderArchive() {
+  const s = state.settings;
+  let polls = [...archiveState.polls];
+  
+  // Filter by search
+  if (archiveState.searchQuery) {
+    const q = archiveState.searchQuery.toLowerCase();
+    polls = polls.filter(p => 
+      (p.headerTitle || '').toLowerCase().includes(q) ||
+      (p.code || '').toLowerCase().includes(q) ||
+      (p.questions || []).some(qu => (qu.title || '').toLowerCase().includes(q))
+    );
+  }
+  
+  // Sort
+  switch (archiveState.sortBy) {
+    case 'newest': polls.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); break;
+    case 'oldest': polls.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)); break;
+    case 'most-voters': polls.sort((a, b) => (b.totalVoters || 0) - (a.totalVoters || 0)); break;
+    case 'most-questions': polls.sort((a, b) => (b.questions?.length || 0) - (a.questions?.length || 0)); break;
+  }
+  
+  const totalPolls = archiveState.polls.length;
+  const totalVoters = archiveState.polls.reduce((sum, p) => sum + (p.totalVoters || 0), 0);
+  const totalQuestions = archiveState.polls.reduce((sum, p) => sum + (p.questions?.length || 0), 0);
+  
+  let listHtml = '';
+  if (polls.length === 0) {
+    listHtml = `
+      <div class="archive-empty">
+        <div class="archive-empty-icon">📭</div>
+        <div style="font-size:15px;margin-bottom:8px;">${archiveState.searchQuery ? 'لا توجد نتائج مطابقة للبحث' : 'لا توجد استبيانات بعد'}</div>
+        <div style="font-size:13px;color:var(--c-text-dim);">${archiveState.searchQuery ? 'جرّب كلمات بحث أخرى' : 'ابدأ بإنشاء استبيانك الأول من الصفحة الرئيسية'}</div>
+      </div>`;
+  } else {
+    polls.forEach(p => {
+      const date = p.createdAt ? new Date(p.createdAt) : null;
+      const dateStr = date ? `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}` : '—';
+      const timeStr = date ? `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}` : '';
+      const qCount = (p.questions || []).length;
+      const voterCount = p.totalVoters || 0;
+      listHtml += `
+        <div class="archive-item">
+          <div class="archive-item-top">
+            <div class="archive-item-title-block">
+              <div class="archive-item-title">${escapeHtml(p.headerTitle || 'استبيان بدون عنوان')}</div>
+              <div class="archive-item-code">${p.code}</div>
+            </div>
+          </div>
+          <div class="archive-item-meta">
+            <span><span class="meta-icon">📅</span> ${dateStr} ${timeStr}</span>
+            <span><span class="meta-icon">❓</span> ${qCount} ${qCount === 1 ? 'سؤال' : 'أسئلة'}</span>
+            <span><span class="meta-icon">👥</span> ${voterCount} ${voterCount === 1 ? 'مصوت' : 'مصوتين'}</span>
+          </div>
+          <div class="archive-item-actions">
+            <button class="archive-action-btn" onclick="archiveOpenPoll('${p.code}')">🎛️ فتح</button>
+            <button class="archive-action-btn" onclick="archiveShowResults('${p.code}')">📊 النتائج</button>
+            <button class="archive-action-btn" onclick="archiveExport('${p.code}')">💾 تصدير</button>
+            <button class="archive-action-btn danger" onclick="archiveDelete('${p.code}')">🗑️ حذف</button>
+          </div>
+        </div>`;
+    });
+  }
+  
+  document.getElementById('root').innerHTML = `
+    <div class="container">
+      <div class="main-header">
+        ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">لوحة تحكم المشرف</div>
+        <h1 class="main-header-title">📚 أرشيف الاستبيانات</h1>
+      </div>
+      
+      <div class="card">
+        <button class="secondary-btn" style="margin-top:0;margin-bottom:1rem;" onclick="window.location.href='${buildUrl({admin:1})}'">← العودة للرئيسية</button>
+        
+        <div class="archive-stats-bar">
+          <div class="archive-stat"><div class="archive-stat-label">إجمالي الاستبيانات</div><div class="archive-stat-value">${totalPolls}</div></div>
+          <div class="archive-stat"><div class="archive-stat-label">إجمالي المصوتين</div><div class="archive-stat-value">${totalVoters}</div></div>
+          <div class="archive-stat"><div class="archive-stat-label">إجمالي الأسئلة</div><div class="archive-stat-value">${totalQuestions}</div></div>
+        </div>
+        
+        <div class="archive-header">
+          <input type="text" class="input-field archive-search" placeholder="🔍 ابحث بالعنوان أو الرمز أو السؤال..." value="${escapeHtml(archiveState.searchQuery)}" oninput="archiveSearch(this.value)" />
+          <select class="archive-sort-btn" onchange="archiveSort(this.value)">
+            <option value="newest" ${archiveState.sortBy === 'newest' ? 'selected' : ''}>الأحدث أولاً</option>
+            <option value="oldest" ${archiveState.sortBy === 'oldest' ? 'selected' : ''}>الأقدم أولاً</option>
+            <option value="most-voters" ${archiveState.sortBy === 'most-voters' ? 'selected' : ''}>الأكثر مشاركة</option>
+            <option value="most-questions" ${archiveState.sortBy === 'most-questions' ? 'selected' : ''}>الأكثر أسئلة</option>
+          </select>
+        </div>
+        
+        ${listHtml}
+      </div>
+      
+      ${s.trainerName ? `<div class="app-footer">${escapeHtml(s.trainerName)}</div>` : ''}
+    </div>`;
+}
+
+window.archiveSearch = function(val) {
+  archiveState.searchQuery = val;
+  renderArchive();
+  // Refocus input
+  setTimeout(() => { 
+    const inp = document.querySelector('.archive-search'); 
+    if (inp) { inp.focus(); inp.setSelectionRange(val.length, val.length); }
+  }, 10);
+};
+
+window.archiveSort = function(val) {
+  archiveState.sortBy = val;
+  renderArchive();
+};
+
+window.archiveOpenPoll = function(code) {
+  window.location.href = buildUrl({ s: code, admin: 1 });
+};
+
+window.archiveShowResults = function(code) {
+  const poll = archiveState.polls.find(p => p.code === code);
+  if (!poll) { showToast('الاستبيان غير موجود', 'error'); return; }
+  
+  const totalVoters = poll.totalVoters || 0;
+  const questions = poll.questions || [];
+  const date = poll.createdAt ? new Date(poll.createdAt) : null;
+  const dateStr = date ? `${String(date.getDate()).padStart(2,'0')}/${String(date.getMonth()+1).padStart(2,'0')}/${date.getFullYear()}` : '—';
+  
+  let questionsHtml = '';
+  if (questions.length === 0) {
+    questionsHtml = '<div class="results-no-answers">لا توجد أسئلة في هذا الاستبيان</div>';
+  } else {
+    questions.forEach((q, qIdx) => {
+      const qTotal = q.options.reduce((sum, o) => sum + (o.votes || 0), 0);
+      const maxV = Math.max(...q.options.map(o => o.votes || 0), 1);
+      let optsHtml = '';
+      if (qTotal === 0) {
+        optsHtml = '<div class="results-no-answers">لم يجب أحد على هذا السؤال</div>';
+      } else {
+        q.options.forEach(o => {
+          const pct = Math.round(((o.votes || 0) / qTotal) * 100);
+          const bw = ((o.votes || 0) / maxV) * 100;
+          optsHtml += `
+            <div class="result-bar-container">
+              <div class="result-bar-label">
+                <span class="result-bar-name">${escapeHtml(o.text)}</span>
+                <span class="result-bar-stats">${o.votes || 0} · ${pct}%</span>
+              </div>
+              <div class="result-bar-track"><div class="result-bar-fill" style="width:${bw}%;"></div></div>
+            </div>`;
+        });
+      }
+      questionsHtml += `
+        <div class="results-question-block">
+          <div class="results-question-block-title">
+            <div class="results-question-num">${qIdx + 1}</div>
+            <div class="results-question-text">${escapeHtml(q.title)}</div>
+          </div>
+          ${optsHtml}
+        </div>`;
+    });
+  }
+  
+  // Trainer rating section (if enabled)
+  let trainerSectionHtml = '';
+  if (poll.enableTrainerRating) {
+    const tstats = computeTrainerStats(poll, state.settings);
+    if (tstats.totalRaters > 0) {
+      let axesBars = '';
+      tstats.axisStats.forEach(a => {
+        const pct = (a.avg / 5) * 100;
+        axesBars += `
+          <div class="axis-result-row">
+            <div class="axis-result-label">
+              <span class="axis-result-name">${escapeHtml(a.name)}</span>
+              <span class="axis-result-stats">${a.count > 0 ? a.avg.toFixed(2) + ' / 5' : '—'} ${a.count > 0 ? `· (${a.count})` : ''}</span>
+            </div>
+            <div class="axis-result-track"><div class="axis-result-fill" style="width:${pct}%;"></div></div>
+          </div>`;
+      });
+      let commentsPreview = '';
+      if (tstats.comments.length > 0) {
+        let items = '';
+        tstats.comments.slice(0, 5).forEach(c => {
+          items += `<div class="comment-item">"${escapeHtml(c.comment)}"</div>`;
+        });
+        commentsPreview = `
+          <div class="comments-section">
+            <div class="comments-section-title">💬 تعليقات (${tstats.comments.length})</div>
+            ${items}
+            ${tstats.comments.length > 5 ? `<p style="text-align:center;font-size:12px;color:var(--c-text-muted);">...و ${tstats.comments.length - 5} تعليق آخر</p>` : ''}
+          </div>`;
+      }
+      trainerSectionHtml = `
+        <div class="results-question-block" style="border:1px solid rgba(245,158,11,0.3);">
+          <div class="results-question-block-title">
+            <div class="results-question-num" style="background:linear-gradient(135deg,#f59e0b 0%,#f97316 100%);">⭐</div>
+            <div class="results-question-text" style="color:var(--c-warning);">تقييم المدرب</div>
+          </div>
+          <div class="trainer-overall">
+            <div class="trainer-overall-score">${tstats.overall.toFixed(2)}<small> / 5</small></div>
+            <div class="trainer-overall-info">
+              <div class="trainer-overall-stars">${buildStarsDisplay(tstats.overall)}</div>
+              <div class="trainer-overall-label">${tstats.totalRaters} ${tstats.totalRaters === 1 ? 'مقيّم' : 'مقيّمين'}</div>
+            </div>
+          </div>
+          ${axesBars}
+          ${commentsPreview}
+        </div>`;
+    } else {
+      trainerSectionHtml = `
+        <div class="results-question-block" style="border:1px dashed var(--c-border);">
+          <div class="results-question-block-title">
+            <div class="results-question-num" style="background:linear-gradient(135deg,#f59e0b 0%,#f97316 100%);">⭐</div>
+            <div class="results-question-text">تقييم المدرب (لم يُستَخدم)</div>
+          </div>
+        </div>`;
+    }
+  }
+  
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-backdrop" onclick="closeModal(event)">
+      <div class="modal-card results-modal-content" onclick="event.stopPropagation()">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;gap:10px;">
+          <div>
+            <div class="modal-title">${escapeHtml(poll.headerTitle || 'نتائج الاستبيان')}</div>
+            <div class="modal-subtitle">الرمز: ${code} · ${dateStr} · ${totalVoters} مصوت</div>
+          </div>
+          <button class="archive-action-btn" style="flex-shrink:0;" onclick="closeModal()">إغلاق ×</button>
+        </div>
+        ${questionsHtml}
+        ${trainerSectionHtml}
+        <div class="btn-row">
+          <button class="primary-btn" style="flex:1;" onclick="archiveExportDirect('${code}', 'pdf')">📄 تصدير PDF</button>
+          <button class="primary-btn" style="flex:1;background:linear-gradient(135deg,#10b981 0%,#059669 100%);" onclick="archiveExportDirect('${code}', 'excel')">📊 تصدير Excel</button>
+        </div>
+      </div>
+    </div>`;
+};
+
+window.archiveExport = function(code) {
+  const poll = archiveState.polls.find(p => p.code === code);
+  if (!poll) return;
+  document.getElementById('modal-root').innerHTML = `
+    <div class="modal-backdrop" onclick="closeModal(event)">
+      <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-title">تصدير "${escapeHtml(poll.headerTitle || 'الاستبيان')}"</div>
+        <div class="modal-subtitle">اختر نوع التصدير</div>
+        <div class="modal-option" onclick="archiveExportDirect('${code}', 'pdf')">
+          <div class="modal-option-title">📄 تصدير كـ PDF</div>
+          <div class="modal-option-desc">تقرير ملون احترافي — مناسب للطباعة والعرض</div>
+        </div>
+        <div class="modal-option" onclick="archiveExportDirect('${code}', 'excel')">
+          <div class="modal-option-title">📊 تصدير كـ Excel</div>
+          <div class="modal-option-desc">جداول بيانات — مناسب للتحليل الرقمي</div>
+        </div>
+        <button class="secondary-btn" onclick="closeModal()">إلغاء</button>
+      </div>
+    </div>`;
+};
+
+window.archiveExportDirect = function(code, type) {
+  closeModal();
+  const poll = archiveState.polls.find(p => p.code === code);
+  if (!poll) return;
+  // Temporarily set as current poll for export
+  const prevPoll = state.pollData;
+  const prevCode = state.sessionCode;
+  state.pollData = poll;
+  state.sessionCode = code;
+  if (type === 'pdf') exportPDF('combined');
+  else exportExcel('combined');
+  state.pollData = prevPoll;
+  state.sessionCode = prevCode;
+};
+
+window.archiveDelete = async function(code) {
+  const poll = archiveState.polls.find(p => p.code === code);
+  if (!poll) return;
+  if (!confirm(`هل أنت متأكد من حذف الاستبيان "${poll.headerTitle || code}"؟\n\n⚠️ سيتم حذف كل النتائج والبيانات نهائياً ولا يمكن استرجاعها.`)) return;
+  try {
+    await db.ref('polls/' + code).remove();
+    archiveState.polls = archiveState.polls.filter(p => p.code !== code);
+    renderArchive();
+    showToast('تم حذف الاستبيان');
+  } catch (e) {
+    console.error(e);
+    showToast('فشل الحذف', 'error');
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+// PROJECTION
+// ═══════════════════════════════════════════════════════════════
+async function renderProjection(code) {
+  const poll = await loadPoll(code);
+  if (!poll) { document.getElementById('root').innerHTML = `<div class="container"><div class="card"><div class="status-msg status-error">الاستبيان غير موجود</div></div></div>`; return; }
+  const voterUrl = buildUrl({ s: code });
+  const s = state.settings;
+  document.getElementById('root').innerHTML = `
+    <div class="projection-screen">
+      <div class="main-header" style="max-width:700px;margin:0 auto 2rem;">
+        ${s.logoUrl ? `<img src="${escapeHtml(s.logoUrl)}" class="custom-logo" alt="logo">` : ''}
+        <div class="main-header-label">موضوع التصويت</div>
+        <h1 class="main-header-title" style="font-size:32px;">${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1>
+      </div>
+      <div class="projection-qr">
+        <div style="font-size:18px;color:var(--c-accent);font-weight:600;margin-bottom:1rem;">امسح الرمز للمشاركة</div>
+        <div id="proj-qr" style="display:flex;justify-content:center;"></div>
+        <div class="qr-link" style="margin-top:1.5rem;font-size:14px;">${voterUrl}</div>
+        <div style="margin-top:1rem;font-size:16px;color:var(--c-accent);font-weight:700;letter-spacing:4px;">رمز الجلسة: ${code}</div>
+      </div>
+      <div class="projection-instructions">📱 وجّه كاميرا جوالك على الرمز</div>
+      ${s.trainerName ? `<div class="app-footer">${escapeHtml(s.trainerName)}</div>` : ''}
+    </div>`;
+  setTimeout(() => {
+    const c = document.getElementById('proj-qr');
+    if (c && typeof QRCode !== 'undefined') new QRCode(c, { text: voterUrl, width: 300, height: 300, colorDark: '#000', colorLight: '#ffffff' });
+  }, 50);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT — Modal + PDF + Excel
+// ═══════════════════════════════════════════════════════════════
+window.showExportModal = function(type) {
+  const questions = state.pollData.questions || [];
+  const m = document.getElementById('modal-root');
+  m.innerHTML = `
+    <div class="modal-backdrop" onclick="closeModal(event)">
+      <div class="modal-card" onclick="event.stopPropagation()">
+        <div class="modal-title">كيف تريد تصدير النتائج؟</div>
+        <div class="modal-subtitle">اختر طريقة التصدير المناسبة</div>
+        <div class="modal-option" onclick="doExport('${type}', 'combined')">
+          <div class="modal-option-title">📊 تقرير شامل (ملف واحد)</div>
+          <div class="modal-option-desc">كل الأسئلة وأصواتها في تقرير واحد منظّم — مناسب للعرض والطباعة</div>
+        </div>
+        <div class="modal-option" onclick="doExport('${type}', 'separate')">
+          <div class="modal-option-title">📂 ملف لكل سؤال</div>
+          <div class="modal-option-desc">تقرير منفصل لكل سؤال (${questions.length} ${type === 'pdf' ? 'نوافذ طباعة' : 'ملفات'}) — مناسب للتحليل المفصّل</div>
+        </div>
+        <button class="secondary-btn" onclick="closeModal()">إلغاء</button>
+      </div>
+    </div>`;
+};
+window.closeModal = function(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('modal-root').innerHTML = '';
+};
+window.doExport = function(type, mode) {
+  closeModal();
+  if (type === 'pdf') exportPDF(mode);
+  else exportExcel(mode);
+};
+
+// Color palette for chart colors (beautiful, print-friendly)
+const CHART_COLORS = [
+  '#3b82f6', // blue
+  '#10b981', // emerald
+  '#f59e0b', // amber
+  '#ef4444', // red
+  '#8b5cf6', // violet
+  '#06b6d4', // cyan
+  '#ec4899', // pink
+  '#84cc16', // lime
+  '#f97316', // orange
+  '#6366f1', // indigo
+  '#14b8a6', // teal
+  '#a855f7'  // purple
+];
+
+function buildDonutChart(options, total, colorSet) {
+  if (total === 0) {
+    return `<svg width="100" height="100" viewBox="0 0 140 140"><circle cx="70" cy="70" r="55" fill="none" stroke="#e2e8f0" stroke-width="22"/><text x="70" y="75" text-anchor="middle" font-size="12" fill="#94a3b8" font-weight="600" font-family="Segoe UI, Arial">لا أصوات</text></svg>`;
+  }
+  
+  const cx = 70, cy = 70, r = 55, strokeW = 22;
+  const circumference = 2 * Math.PI * r;
+  let currentOffset = 0;
+  let segments = '';
+  
+  options.forEach((opt, i) => {
+    const val = opt.votes || 0;
+    if (val === 0) return;
+    const pct = val / total;
+    const dashLength = pct * circumference;
+    const color = colorSet[i % colorSet.length];
+    segments += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="${strokeW}" stroke-dasharray="${dashLength} ${circumference}" stroke-dashoffset="${-currentOffset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    currentOffset += dashLength;
+  });
+  
+  return `<svg width="100" height="100" viewBox="0 0 140 140"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f1f5f9" stroke-width="${strokeW}"/>${segments}<text x="70" y="68" text-anchor="middle" font-size="22" fill="#0f172a" font-weight="700" font-family="Segoe UI, Arial">${total}</text><text x="70" y="85" text-anchor="middle" font-size="11" fill="#64748b" font-weight="500" font-family="Segoe UI, Arial">صوت</text></svg>`;
+}
+
+function buildPDFContent(poll, question, s, sessionCode, reportTitle) {
+  const d = getFormattedDate();
+  
+  let questionsHtml = '';
+  const questionsToShow = question ? [question] : (poll.questions || []);
+  
+  questionsToShow.forEach((q, qi) => {
+    const qTotal = q.options.reduce((s, o) => s + (o.votes || 0), 0);
+    const maxV = Math.max(...q.options.map(o => o.votes || 0), 1);
+    
+    // Build donut chart
+    const donut = buildDonutChart(q.options, qTotal, CHART_COLORS);
+    
+    // Build legend with integrated bars (no separate table)
+    let legend = '';
+    q.options.forEach((o, i) => {
+      const pct = qTotal > 0 ? Math.round(((o.votes || 0) / qTotal) * 100) : 0;
+      const bw = qTotal > 0 ? ((o.votes || 0) / maxV) * 100 : 0;
+      const color = CHART_COLORS[i % CHART_COLORS.length];
+      legend += `
+        <div class="legend-item">
+          <div class="legend-row-top">
+            <span class="legend-num" style="background:${color};">${i + 1}</span>
+            <span class="legend-label">${escapeHtml(o.text)}</span>
+            <span class="legend-votes">${o.votes || 0} ${(o.votes || 0) === 1 ? 'صوت' : 'أصوات'}</span>
+            <span class="legend-pct" style="color:${color};">${pct}%</span>
+          </div>
+          <div class="legend-bar-wrap">
+            <div class="legend-bar-fill" style="width:${bw}%;background:linear-gradient(90deg,${color}dd 0%,${color} 100%);"></div>
+          </div>
+        </div>`;
+    });
+    
+    const qNumberDisplay = question ? '' : qi + 1;
+    
+    questionsHtml += `
+      <div class="q-section">
+        <div class="q-header">
+          <div class="q-num">${qNumberDisplay}</div>
+          <div class="q-title-wrap">
+            <span class="q-title">${escapeHtml(q.title)}</span>
+            <span class="q-meta"><span class="mini-tag">${qTotal} صوت</span></span>
+          </div>
+        </div>
+        <div class="chart-row">
+          <div class="chart-donut">${donut}</div>
+          <div class="chart-legend">${legend}</div>
+        </div>
+      </div>`;
+  });
+  
+  // Trainer rating section (only in combined mode, not per-question exports)
+  let trainerHtml = '';
+  if (!question && poll.enableTrainerRating) {
+    const tstats = computeTrainerStats(poll, s);
+    if (tstats.totalRaters > 0) {
+      // Stars display string for PDF
+      const overallRounded = Math.round(tstats.overall * 2) / 2;
+      let starsStr = '';
+      for (let i = 1; i <= 5; i++) {
+        if (i <= overallRounded) starsStr += '<span style="color:#f59e0b;">★</span>';
+        else if (i - 0.5 === overallRounded) starsStr += '<span style="color:#f59e0b;">⯨</span>';
+        else starsStr += '<span style="color:#cbd5e1;">☆</span>';
+      }
+      
+      let axesBars = '';
+      tstats.axisStats.forEach(a => {
+        const pct = (a.avg / 5) * 100;
+        axesBars += `
+          <div class="t-axis-row">
+            <div class="t-axis-label">
+              <span class="t-axis-name">${escapeHtml(a.name)}</span>
+              <span class="t-axis-score">${a.count > 0 ? a.avg.toFixed(2) + ' / 5' : '—'} ${a.count > 0 ? `· (${a.count})` : ''}</span>
+            </div>
+            <div class="t-axis-track"><div class="t-axis-fill" style="width:${pct}%;"></div></div>
+          </div>`;
+      });
+      
+      let commentsListHtml = '';
+      if (tstats.comments.length > 0) {
+        let items = '';
+        tstats.comments.forEach(c => {
+          items += `<div class="t-comment">"${escapeHtml(c.comment)}"</div>`;
+        });
+        commentsListHtml = `
+          <div class="t-comments-section">
+            <div class="t-comments-title">💬 تعليقات المتدربين (${tstats.comments.length})</div>
+            ${items}
+          </div>`;
+      }
+      
+      trainerHtml = `
+        <div class="t-section">
+          <div class="t-header">
+            <div class="t-icon">⭐</div>
+            <div class="t-title-wrap">
+              <div class="t-title">${escapeHtml(s.trainerRatingTitle)}${s.trainerName ? ' — ' + escapeHtml(s.trainerName) : ''}</div>
+              <div class="t-subtitle">${tstats.totalRaters} ${tstats.totalRaters === 1 ? 'مقيّم' : 'مقيّمين'}</div>
+            </div>
+          </div>
+          <div class="t-overall">
+            <div class="t-overall-score">${tstats.overall.toFixed(2)}<small>/5</small></div>
+            <div class="t-overall-stars">${starsStr}</div>
+          </div>
+          ${axesBars}
+          ${commentsListHtml}
+        </div>`;
+    }
+  }
+  
+  return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"><title>${escapeHtml(reportTitle)}</title>
+<style>
+@page { size: A4; margin: 12mm; }
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI','Tahoma',Arial,sans-serif;direction:rtl;color:#334155;background:#fafbfc;padding:16px;line-height:1.4;}
+.page-wrap{max-width:100%;background:#fff;border-radius:10px;padding:18px;box-shadow:0 0 0 1px #e2e8f0;}
+.header{background:linear-gradient(135deg,#64748b 0%,#475569 50%,#334155 100%);color:#fff;padding:16px 20px;border-radius:10px;text-align:center;margin-bottom:12px;position:relative;overflow:hidden;}
+.header::before{content:'';position:absolute;top:-40%;right:-10%;width:120px;height:120px;background:rgba(255,255,255,0.08);border-radius:50%;}
+.header::after{content:'';position:absolute;bottom:-50%;left:-15%;width:150px;height:150px;background:rgba(255,255,255,0.05);border-radius:50%;}
+.header .label{font-size:10px;opacity:.85;margin-bottom:4px;letter-spacing:1.5px;position:relative;z-index:1;font-weight:500;}
+.header h1{font-size:18px;font-weight:600;position:relative;z-index:1;line-height:1.4;}
+.header .meta{font-size:10px;opacity:.8;margin-top:6px;position:relative;z-index:1;letter-spacing:0.5px;}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+.stat-card{background:linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%);border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;text-align:center;}
+.stat-card .s-label{font-size:9px;color:#64748b;font-weight:600;margin-bottom:2px;letter-spacing:0.5px;text-transform:uppercase;}
+.stat-card .s-value{font-size:16px;font-weight:700;color:#0f172a;line-height:1.1;}
+.stat-card .s-value-sub{font-size:11px;color:#475569;font-weight:600;}
+.q-section{margin-bottom:10px;page-break-inside:avoid;}
+.q-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:7px 12px;background:linear-gradient(135deg,#f0f4f8 0%,#e6edf3 100%);border-radius:8px;border-right:3px solid #64748b;}
+.q-num{background:linear-gradient(135deg,#64748b 0%,#475569 100%);color:white;width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;box-shadow:0 1px 3px rgba(71,85,105,0.2);}
+.q-title-wrap{flex:1;}
+.q-title{font-size:12px;font-weight:700;color:#1e293b;line-height:1.3;}
+.q-meta{display:inline-block;margin-right:6px;}
+.mini-tag{font-size:9px;background:#fff;border:1px solid #cbd5e1;color:#475569;padding:1px 6px;border-radius:8px;font-weight:600;}
+.chart-row{display:flex;gap:14px;align-items:center;margin-bottom:6px;padding:10px 12px;background:#fafbfc;border:1px solid #f1f5f9;border-radius:8px;page-break-inside:avoid;}
+.chart-donut{flex-shrink:0;}
+.chart-legend{flex:1;display:flex;flex-direction:column;gap:4px;}
+.legend-item{background:#fff;border:1px solid #f1f5f9;border-radius:6px;padding:5px 10px;page-break-inside:avoid;}
+.legend-row-top{display:flex;align-items:center;gap:8px;margin-bottom:3px;}
+.legend-num{color:#fff;width:18px;height:18px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0;box-shadow:0 1px 2px rgba(0,0,0,0.1);}
+.legend-label{flex:1;font-size:11px;color:#1e293b;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.legend-votes{font-size:10px;color:#64748b;font-weight:600;white-space:nowrap;}
+.legend-pct{font-size:12px;font-weight:700;min-width:42px;text-align:left;}
+.legend-bar-wrap{height:4px;background:#f1f5f9;border-radius:8px;overflow:hidden;}
+.legend-bar-fill{height:100%;border-radius:8px;}
+/* Trainer rating section */
+.t-section{margin-top:18px;padding:14px;background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:1px solid #fcd34d;border-radius:10px;page-break-inside:avoid;}
+.t-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px dashed #fcd34d;}
+.t-icon{background:linear-gradient(135deg,#f59e0b 0%,#f97316 100%);color:#fff;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;box-shadow:0 2px 6px rgba(245,158,11,0.3);}
+.t-title-wrap{flex:1;}
+.t-title{font-size:13px;font-weight:700;color:#78350f;}
+.t-subtitle{font-size:10px;color:#92400e;margin-top:2px;}
+.t-overall{display:flex;align-items:center;gap:14px;padding:10px 14px;background:#fff;border:1px solid #fde68a;border-radius:8px;margin-bottom:12px;}
+.t-overall-score{font-size:28px;font-weight:700;color:#d97706;line-height:1;}
+.t-overall-score small{font-size:13px;color:#92400e;font-weight:500;}
+.t-overall-stars{font-size:20px;letter-spacing:3px;direction:ltr;}
+.t-axis-row{margin-bottom:8px;}
+.t-axis-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:11px;align-items:center;}
+.t-axis-name{font-weight:600;color:#1e293b;}
+.t-axis-score{color:#d97706;font-weight:700;}
+.t-axis-track{height:6px;background:#fef3c7;border-radius:10px;overflow:hidden;border:1px solid #fde68a;}
+.t-axis-fill{height:100%;background:linear-gradient(90deg,#f59e0b 0%,#f97316 100%);border-radius:10px;}
+.t-comments-section{margin-top:12px;padding-top:10px;border-top:1px dashed #fcd34d;}
+.t-comments-title{font-size:11px;font-weight:700;color:#78350f;margin-bottom:8px;}
+.t-comment{background:#fff;border:1px solid #fef3c7;border-right:3px solid #f59e0b;border-radius:6px;padding:7px 10px;margin-bottom:5px;font-size:10px;color:#1e293b;line-height:1.5;page-break-inside:avoid;}
+.footer{margin-top:14px;padding-top:8px;border-top:1px dashed #cbd5e1;text-align:center;font-size:10px;color:#94a3b8;letter-spacing:0.3px;}
+.footer-brand{font-weight:600;color:#64748b;}
+.print-bar{position:fixed;top:10px;left:10px;background:#475569;color:#fff;padding:10px 20px;border-radius:8px;cursor:pointer;border:none;font-size:13px;font-weight:600;box-shadow:0 4px 12px rgba(71,85,105,0.3);z-index:9999;}
+.print-bar:hover{background:#334155;}
+@media print { 
+  .print-bar{display:none;} 
+  body{padding:0;background:#fff;} 
+  .page-wrap{box-shadow:none;padding:0;}
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+}
+</style></head><body>
+<button class="print-bar" onclick="window.print()">🖨️ طباعة / حفظ PDF</button>
+<div class="page-wrap">
+<div class="header"><div class="label">${escapeHtml(reportTitle)}</div><h1>${escapeHtml(poll.headerTitle || s.defaultHeader)}</h1><div class="meta">📅 ${d.full}</div></div>
+<div class="stats">
+<div class="stat-card"><div class="s-label">عدد المصوتين</div><div class="s-value">${poll.totalVoters || 0}</div></div>
+<div class="stat-card"><div class="s-label">عدد الأسئلة</div><div class="s-value">${questionsToShow.length}</div></div>
+<div class="stat-card"><div class="s-label">رمز الجلسة</div><div class="s-value-sub" style="font-family:monospace;letter-spacing:2px;margin-top:4px;">${sessionCode}</div></div>
+</div>
+${questionsHtml}
+${trainerHtml}
+<div class="footer">${s.trainerName ? `<span class="footer-brand">${escapeHtml(s.trainerName)}</span> · ` : ''}تقرير آلي من تطبيق التصويت التفاعلي</div>
+</div>
+<script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});<\/script>
+</body></html>`;
+}
+
+function exportPDF(mode) {
+  try {
+    const poll = state.pollData;
+    const s = state.settings;
+    if (mode === 'combined') {
+      const w = window.open('', '_blank', 'width=900,height=700');
+      if (!w) { showToast('اسمح بالنوافذ المنبثقة', 'error'); return; }
+      w.document.write(buildPDFContent(poll, null, s, state.sessionCode, 'تقرير نتائج الاستبيان الشامل'));
+      w.document.close();
+      showToast('تم فتح نافذة الطباعة');
+    } else {
+      // Open one window per question
+      const questions = poll.questions || [];
+      let opened = 0;
+      questions.forEach((q, i) => {
+        setTimeout(() => {
+          const w = window.open('', '_blank', 'width=900,height=700');
+          if (!w) { if (i === 0) showToast('اسمح بالنوافذ المنبثقة', 'error'); return; }
+          w.document.write(buildPDFContent(poll, q, s, state.sessionCode, `نتائج السؤال ${i + 1}`));
+          w.document.close();
+          opened++;
+        }, i * 500);
+      });
+      showToast(`سيتم فتح ${questions.length} نوافذ طباعة`);
+    }
+  } catch (e) { console.error(e); showToast('حدث خطأ', 'error'); }
+}
+
+function exportExcel(mode) {
+  try {
+    if (typeof XLSX === 'undefined') { showToast('المكتبة لم تُحمّل بعد', 'error'); return; }
+    const poll = state.pollData;
+    const s = state.settings;
+    const d = getFormattedDate();
+    const totalVoters = poll.totalVoters || 0;
+    
+    if (mode === 'combined') {
+      // Single file with multiple sheets
+      const wb = XLSX.utils.book_new();
+      wb.Workbook = { Views: [{ RTL: true }] };
+      
+      // Summary sheet
+      const summary = [
+        ['تقرير نتائج الاستبيان الشامل'], [],
+        ['العنوان الرئيسي', poll.headerTitle || s.defaultHeader],
+        ['رمز الجلسة', state.sessionCode],
+        ['عدد المصوتين', totalVoters],
+        ['عدد الأسئلة', (poll.questions || []).length],
+        ['تاريخ التصدير', d.full]
+      ];
+      if (s.trainerName) summary.push(['المدرب/المشرف', s.trainerName]);
+      
+      // Add trainer rating summary to main sheet
+      if (poll.enableTrainerRating) {
+        const tstats = computeTrainerStats(poll, s);
+        summary.push([]);
+        summary.push(['── ملخص تقييم المدرب ──']);
+        summary.push(['عدد المقيّمين', tstats.totalRaters]);
+        summary.push(['التقييم العام (من 5)', tstats.totalRaters > 0 ? tstats.overall.toFixed(2) : '—']);
+        summary.push(['عدد التعليقات', tstats.comments.length]);
+      }
+      
+      const wsSum = XLSX.utils.aoa_to_sheet(summary);
+      wsSum['!cols'] = [{wch:28},{wch:40}];
+      wsSum['!merges'] = [{s:{r:0,c:0},e:{r:0,c:1}}];
+      wsSum['!sheetView'] = [{RTL:true}];
+      XLSX.utils.book_append_sheet(wb, wsSum, 'ملخص عام');
+      
+      // One sheet per question
+      (poll.questions || []).forEach((q, qi) => {
+        const qTotal = q.options.reduce((sum, o) => sum + (o.votes || 0), 0);
+        const rows = [
+          [`السؤال ${qi + 1}: ${q.title}`], [],
+          ['نوع التصويت', q.voteType === 'multi' ? 'اختيارات متعددة' : 'اختيار واحد'],
+          ['الإلزامية', q.required ? 'إلزامي' : 'اختياري'],
+          ['إجمالي الأصوات', qTotal], [],
+          ['#', 'البند', 'عدد الأصوات', 'النسبة']
+        ];
+        q.options.forEach((o, i) => {
+          const pct = qTotal > 0 ? Math.round(((o.votes || 0) / qTotal) * 100) : 0;
+          rows.push([i + 1, o.text, o.votes || 0, pct + '%']);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{wch:6},{wch:35},{wch:15},{wch:15}];
+        ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}}];
+        ws['!sheetView'] = [{RTL:true}];
+        const sheetName = `س${qi + 1}`.substring(0, 30);
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+      });
+      
+      // Trainer rating detailed sheet (if enabled and has data)
+      if (poll.enableTrainerRating) {
+        const tstats = computeTrainerStats(poll, s);
+        if (tstats.totalRaters > 0) {
+          const trRows = [
+            ['تقييم المدرب' + (s.trainerName ? ' — ' + s.trainerName : '')], [],
+            ['عدد المقيّمين', tstats.totalRaters],
+            ['التقييم العام (من 5)', tstats.overall.toFixed(2)], [],
+            ['#', 'المحور', 'المتوسط (من 5)', 'عدد المقيّمين', 'النسبة المئوية']
+          ];
+          tstats.axisStats.forEach((a, i) => {
+            trRows.push([i + 1, a.name, a.count > 0 ? a.avg.toFixed(2) : '—', a.count, a.count > 0 ? Math.round((a.avg / 5) * 100) + '%' : '—']);
+          });
+          
+          // Comments section
+          if (tstats.comments.length > 0) {
+            trRows.push([]);
+            trRows.push(['تعليقات المتدربين']);
+            trRows.push(['#', 'التعليق', 'التاريخ']);
+            tstats.comments.forEach((c, i) => {
+              const dt = c.at ? new Date(c.at) : null;
+              const dtStr = dt ? `${String(dt.getDate()).padStart(2,'0')}/${String(dt.getMonth()+1).padStart(2,'0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}` : '';
+              trRows.push([i + 1, c.comment, dtStr]);
+            });
+          }
+          
+          const wsTr = XLSX.utils.aoa_to_sheet(trRows);
+          wsTr['!cols'] = [{wch:6},{wch:40},{wch:18},{wch:15},{wch:15}];
+          wsTr['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}}];
+          wsTr['!sheetView'] = [{RTL:true}];
+          XLSX.utils.book_append_sheet(wb, wsTr, 'تقييم المدرب');
+        }
+      }
+      
+      XLSX.writeFile(wb, `تقرير_الاستبيان_${d.file}.xlsx`);
+      showToast('تم تصدير الملف');
+    } else {
+      // Separate files
+      const questions = poll.questions || [];
+      questions.forEach((q, qi) => {
+        const qTotal = q.options.reduce((sum, o) => sum + (o.votes || 0), 0);
+        const rows = [
+          [`نتائج السؤال ${qi + 1}`], [],
+          ['العنوان الرئيسي', poll.headerTitle || s.defaultHeader],
+          ['رمز الجلسة', state.sessionCode],
+          ['نص السؤال', q.title],
+          ['نوع التصويت', q.voteType === 'multi' ? 'اختيارات متعددة' : 'اختيار واحد'],
+          ['الإلزامية', q.required ? 'إلزامي' : 'اختياري'],
+          ['إجمالي الأصوات', qTotal],
+          ['عدد المصوتين الكلي', totalVoters],
+          ['تاريخ التصدير', d.full], [],
+          ['#', 'البند', 'عدد الأصوات', 'النسبة']
+        ];
+        q.options.forEach((o, i) => {
+          const pct = qTotal > 0 ? Math.round(((o.votes || 0) / qTotal) * 100) : 0;
+          rows.push([i + 1, o.text, o.votes || 0, pct + '%']);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{wch:6},{wch:40},{wch:15},{wch:15}];
+        ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:3}}];
+        ws['!sheetView'] = [{RTL:true}];
+        const wb = XLSX.utils.book_new();
+        wb.Workbook = { Views: [{ RTL: true }] };
+        XLSX.utils.book_append_sheet(wb, ws, 'النتائج');
+        XLSX.writeFile(wb, `سؤال_${qi + 1}_${d.file}.xlsx`);
+      });
+      showToast(`تم تصدير ${questions.length} ملفات`);
+    }
+  } catch (e) { console.error(e); showToast('حدث خطأ', 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Start
+// ═══════════════════════════════════════════════════════════════
+(async function init() {
+  if (sessionStorage.getItem('is-admin') === '1') state.isAdmin = true;
+  await loadSettings();
+  listenToSettings();
+  route();
+})();
+</script>
+</body>
+</html>
