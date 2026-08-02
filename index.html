@@ -870,6 +870,7 @@
 <body>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 // PERF: Heavy export libraries (XLSX ~900KB, ExcelJS ~900KB) are NOT loaded on
@@ -1085,6 +1086,28 @@ const state = {
 };
 const deviceId = getOrCreateDeviceId();
 
+// ═══ PHASE-2 SECURITY: Firebase Authentication bootstrap ═══
+// Every device signs in anonymously → gets a server-verified uid that the
+// security rules can trust (write-once votes, own-record-only writes).
+// Trainers additionally sign in with email/password (mapped from username)
+// so rules can enforce poll ownership server-side.
+const TRAINER_EMAIL_DOMAIN = 'tv-local.app';
+function trainerEmail(username) {
+  return String(username || '').trim().toLowerCase() + '@' + TRAINER_EMAIL_DOMAIN;
+}
+let authUid = null;
+firebase.auth().onAuthStateChanged((u) => { authUid = u ? u.uid : null; });
+async function ensureSignedIn() {
+  if (firebase.auth().currentUser) return firebase.auth().currentUser.uid;
+  try {
+    const cred = await firebase.auth().signInAnonymously();
+    return cred.user.uid;
+  } catch (e) { console.error('Anonymous auth failed:', e); return null; }
+}
+ensureSignedIn();
+// Voter identity: auth uid (server-enforceable) with legacy deviceId fallback
+function voterKey() { return authUid || deviceId; }
+
 // Helper: migrate old polls to new format (questions array)
 function migratePoll(poll) {
   if (!poll) return poll;
@@ -1204,7 +1227,7 @@ async function initUserSystem() {
       
       await db.ref('users/' + SUPER_ADMIN_USERNAME).set({
         username: SUPER_ADMIN_USERNAME,
-        password: adminPassword,
+        passwordHash: await hashPassword(SUPER_ADMIN_USERNAME, adminPassword),
         name: settings.trainerName || 'المسؤول الرئيسي',
         role: ROLE_SUPER_ADMIN,
         createdAt: Date.now(),
@@ -1294,8 +1317,40 @@ async function authenticateUser(username, password) {
       return { _error: 'انتهت صلاحية الحساب، تواصل مع المسؤول' };
     }
     
+    // PHASE-2: bind trainer to a real Firebase Auth account so security
+    // rules can enforce ownership server-side. Self-migrating: the app-level
+    // hash was already verified above, so creating the Auth account with the
+    // same password on first login is safe.
+    try {
+      const email = user.authEmail || trainerEmail(cleanUser);
+      let cred;
+      try {
+        cred = await firebase.auth().signInWithEmailAndPassword(email, password);
+      } catch (authErr) {
+        if (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-login-credentials' || authErr.code === 'auth/invalid-credential') {
+          try {
+            cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+          } catch (createErr) {
+            if (createErr.code === 'auth/email-already-in-use') {
+              return { _error: 'كلمة مرور حساب الحماية مختلفة عن كلمة مرور التطبيق. تواصل مع المسؤول لإعادة التعيين.' };
+            }
+            throw createErr;
+          }
+        } else if (authErr.code === 'auth/wrong-password') {
+          return { _error: 'كلمة مرور حساب الحماية مختلفة عن كلمة مرور التطبيق. تواصل مع المسؤول لإعادة التعيين.' };
+        } else { throw authErr; }
+      }
+      if (cred && cred.user && user.authUid !== cred.user.uid) {
+        await db.ref('users/' + cleanUser + '/authUid').set(cred.user.uid);
+      }
+    } catch (bindErr) {
+      console.error('Auth binding failed:', bindErr);
+      return { _error: 'تعذّر ربط حساب الحماية: ' + (bindErr.message || bindErr.code || bindErr) };
+    }
+
     // Update last login
-    await db.ref('users/' + cleanUser + '/lastLogin').set(Date.now());
+    try { await db.ref('users/' + cleanUser + '/lastLogin').set(Date.now()); }
+    catch (e) { console.warn('lastLogin write skipped:', e && e.code); }
     
     return {
       id: cleanUser,
@@ -2078,10 +2133,8 @@ async function saveSettings(updates) {
   try {
     const uid = state.currentUserId || SUPER_ADMIN_USERNAME;
     await db.ref('users/' + uid + '/settings').update(updates);
-    // adminPassword is a system-level field: keep legacy mirror for owner only
-    if (uid === SUPER_ADMIN_USERNAME && updates.adminPassword) {
-      await db.ref('appSettings/adminPassword').set(updates.adminPassword);
-    }
+    // SECURITY (phase-2): the plaintext adminPassword mirror in appSettings
+    // was publicly readable — removed. Firebase Auth is the gate now.
     Object.assign(state.settings, updates);
     return true;
   }
@@ -2218,16 +2271,28 @@ function listenToPoll(code, callback) { const ref = db.ref('polls/' + code); con
 async function checkIfVoted(code) { const snap = await db.ref(`polls/${code}/voters/${deviceId}`).once('value'); return snap.exists(); }
 
 async function submitAllAnswers(code, answers, voterInfo) {
-  const pollSnap = await db.ref('polls/' + code).once('value');
-  const poll = migratePoll(pollSnap.val());
+  // PERF/PRIVACY: read only what scoring needs — not the whole poll with
+  // every other participant's personal data.
+  const [qSnap, tSnap, aeSnap] = await Promise.all([
+    db.ref(`polls/${code}/questions`).once('value'),
+    db.ref(`polls/${code}/pollType`).once('value'),
+    db.ref(`polls/${code}/allowEdit`).once('value')
+  ]);
+  if (qSnap.val() === null && tSnap.val() === null) throw new Error('غير موجود');
+  const poll = migratePoll({ questions: qSnap.val() || [], pollType: tSnap.val() || 'survey', allowEdit: aeSnap.val() });
   if (!poll) throw new Error('غير موجود');
   
   const isWorkshop = poll.pollType === 'workshop';
   const allowEdit = isWorkshop && poll.allowEdit !== false;
   
-  // Read ONLY this device's record directly (fresh, targeted)
-  const existingSnap = await db.ref(`polls/${code}/voters/${deviceId}`).once('value');
-  const existing = existingSnap.val();
+  // Read ONLY this participant's record (fresh, targeted). Check both the
+  // auth-uid key (new) and the legacy deviceId key (pre-migration voters).
+  const vKey = (await ensureSignedIn()) || deviceId;
+  const [uidSnap, legacySnap] = await Promise.all([
+    db.ref(`polls/${code}/voters/${vKey}`).once('value'),
+    vKey !== deviceId ? db.ref(`polls/${code}/voters/${deviceId}`).once('value') : Promise.resolve({ val: () => null })
+  ]);
+  const existing = uidSnap.val() || legacySnap.val();
   
   if (existing && !allowEdit) {
     throw new Error('لقد شاركت بالفعل من هذا الجهاز');
@@ -2284,7 +2349,8 @@ async function submitAllAnswers(code, answers, voterInfo) {
     voterRecord.percentage = total > 0 ? Math.round((score / total) * 100) : 0;
   }
   
-  updates[`voters/${deviceId}`] = voterRecord;
+  voterRecord.deviceId = deviceId; // traceability across devices/browsers
+  updates[`voters/${vKey}`] = voterRecord;
   // Prefix everything to write from the DB root in ONE atomic update:
   // the submission goes under polls/{code}, and its safety-net copy goes to
   // the SEPARATE top-level backups/{code} node (append-only). Keeping the
@@ -2294,6 +2360,7 @@ async function submitAllAnswers(code, answers, voterInfo) {
   const backupKey = db.ref(`backups/${code}`).push().key;
   rootUpdates[`backups/${code}/${backupKey}`] = {
     deviceId: deviceId,
+    voterKey: vKey,
     answers: answers || {},
     info: voterInfo || null,
     at: Date.now(),
@@ -2305,20 +2372,21 @@ async function submitAllAnswers(code, answers, voterInfo) {
 
 async function updatePoll(code, data) { data.updatedAt = Date.now(); await db.ref('polls/' + code).update(data); }
 async function resetVotes(code) {
-  const snap = await db.ref('polls/' + code).once('value');
-  const poll = migratePoll(snap.val());
-  if (!poll) return;
-  // Reset options.votes only for questions that have options (survey/quiz)
-  poll.questions = (poll.questions || []).map(q => {
-    if (Array.isArray(q.options)) {
-      return { ...q, options: q.options.map(o => ({ ...o, votes: 0 })) };
+  const snap = await db.ref('polls/' + code + '/questions').once('value');
+  const questions = snap.val();
+  if (questions === null) return;
+  // SAFETY/PERF: targeted multi-path update — never rewrite the whole poll
+  // with set() (a race here used to be able to clobber concurrent writes).
+  const updates = {};
+  (Array.isArray(questions) ? questions : Object.values(questions)).forEach((q, qi) => {
+    if (q && Array.isArray(q.options)) {
+      q.options.forEach((o, oi) => { updates[`questions/${qi}/options/${oi}/votes`] = 0; });
     }
-    return q; // Workshop questions have no options
   });
-  poll.totalVoters = 0;
-  poll.voters = {};
-  poll.updatedAt = Date.now();
-  await db.ref('polls/' + code).set(poll);
+  updates['totalVoters'] = 0;
+  updates['voters'] = null;
+  updates['updatedAt'] = Date.now();
+  await db.ref('polls/' + code).update(updates);
 }
 
 async function route() {
@@ -2349,8 +2417,66 @@ async function route() {
   }
 }
 
+// ═══ PERF (phase-2): voter-side lightweight subscription ═══
+// Previously EVERY participant subscribed to the WHOLE poll node, so each
+// new vote re-broadcast the entire poll — including ALL voter records
+// (measured ≈55% of payload) — to every connected device: O(N²) traffic
+// that made large sessions feel slow. Voters now fetch metadata once,
+// subscribe live to `questions` only, and read ONLY their own record —
+// they never download other participants' personal data.
+function listenPollVoterLite() {
+  const code = state.sessionCode;
+  const base = db.ref('polls/' + code);
+  let meta = null, gotMeta = false, ownerSettingsLoaded = false, lastQuestions = null;
+
+  const notFound = () => {
+    document.getElementById('root').innerHTML = `<div class="container"><div class="card"><div class="status-msg status-error">الاستبيان غير موجود أو تم حذفه</div><button class="primary-btn" onclick="window.location.href='${buildUrl({admin:1})}'" style="width:100%;margin-top:1rem;">العودة للوحة التحكم</button></div></div>`;
+  };
+
+  const compose = async () => {
+    if (!gotMeta) return;
+    if (!meta || (lastQuestions === null && meta.pollType === undefined)) { notFound(); return; }
+    const data = migratePoll({ ...meta, questions: lastQuestions || [] });
+    const rec = state._myVoterRecord || null;
+    data.voters = {};
+    if (rec) {
+      data.voters[voterKey()] = rec;
+      data.voters[deviceId] = rec; // legacy lookups keep working
+    }
+    state.pollData = data;
+    if (!ownerSettingsLoaded) { ownerSettingsLoaded = true; await loadSettingsForPollOwner(data); }
+    if (data.pollType === 'workshop' && data.allowEdit !== false && rec && rec.answers && (!state.voterAnswers || Object.keys(state.voterAnswers).length === 0)) {
+      state.voterAnswers = JSON.parse(JSON.stringify(rec.answers));
+      state.userHasVoted = true;
+      if (rec.info) state.voterInfo = rec.info;
+    }
+    renderVoteView();
+  };
+  window.__composeVoterView = (rec) => { if (rec !== undefined) state._myVoterRecord = rec; compose(); };
+
+  (async () => {
+    const vk = (await ensureSignedIn()) || deviceId;
+    const fields = ['headerTitle', 'pollType', 'passingPercentage', 'allowEdit', 'scenarioText', 'ownerId', 'createdAt', 'totalVoters'];
+    const [snaps, mineSnap, legacySnap] = await Promise.all([
+      Promise.all(fields.map(f => base.child(f).once('value'))),
+      base.child('voters').child(vk).once('value'),
+      vk !== deviceId ? base.child('voters').child(deviceId).once('value') : Promise.resolve({ val: () => null })
+    ]);
+    const m = {};
+    fields.forEach((f, i) => { const v = snaps[i].val(); if (v !== null) m[f] = v; });
+    meta = Object.keys(m).length ? m : null;
+    gotMeta = true;
+    state._myVoterRecord = mineSnap.val() || legacySnap.val() || null;
+    const qRef = base.child('questions');
+    const qHandler = (snap) => { lastQuestions = snap.val(); compose(); };
+    qRef.on('value', qHandler);
+    state.unsubscribe = () => { qRef.off('value', qHandler); window.__composeVoterView = null; };
+  })();
+}
+
 function listenPoll() {
   if (state.unsubscribe) state.unsubscribe();
+  if (state.view === 'vote') { listenPollVoterLite(); return; }
   let ownerSettingsLoaded = false;
   state.unsubscribe = listenToPoll(state.sessionCode, async (data) => {
     if (!data) {
@@ -2465,8 +2591,9 @@ window.emergencyResetOwner = async function() {
       expiresAt: null
     });
     
-    // Also update legacy adminPassword
-    await db.ref('appSettings/adminPassword').set(pwd);
+    // SECURITY (phase-2): no longer mirror the password in plaintext to the
+    // publicly-readable appSettings node.
+    await db.ref('appSettings/adminPassword').set(null);
     
     // Migrate any orphan polls to owner
     const pollsSnap = await db.ref('polls').once('value');
@@ -2667,9 +2794,12 @@ window.doJoinPoll = function() {
   if (!code || code.length !== 5) { showToast('أدخل رمزاً صحيحاً من 5 أحرف', 'error'); return; }
   window.location.href = buildUrl({ s: code, admin: 1 });
 };
-window.doLogout = function() { 
+window.doLogout = async function() {
   clearUserSession();
-  window.location.href = buildUrl(); 
+  // PHASE-2: drop the trainer's Firebase session; the page reload below
+  // re-establishes a fresh anonymous session for regular voting.
+  try { await firebase.auth().signOut(); } catch (e) {}
+  window.location.href = buildUrl();
 };
 
 // ═══════════════════════════════════════════════════════════════
@@ -5431,11 +5561,17 @@ window.submitAllVoterAnswers = async function() {
       });
     }
     
-    await submitAllAnswers(state.sessionCode, cleanedAnswers, state.voterInfo || null);
+    const submittedRecord = await submitAllAnswers(state.sessionCode, cleanedAnswers, state.voterInfo || null);
     state.userHasVoted = true;
-    // Reload data to get the record back
-    const snap = await db.ref('polls/' + state.sessionCode).once('value');
-    state.pollData = migratePoll(snap.val());
+    // PERF/PRIVACY: use the record we just wrote — no need to re-download
+    // the whole poll (which included every other participant's data).
+    state._myVoterRecord = submittedRecord;
+    if (state.pollData) {
+      state.pollData.voters = state.pollData.voters || {};
+      state.pollData.voters[voterKey()] = submittedRecord;
+      state.pollData.voters[deviceId] = submittedRecord;
+    }
+    if (window.__composeVoterView) window.__composeVoterView(submittedRecord);
     if (isWorkshop) {
       showToast('✅ تم إرسال إجابات الورشة بنجاح!');
     } else if (isQuiz) {
@@ -7107,8 +7243,15 @@ window.archiveOpenPoll = function(code) {
   window.location.href = buildUrl({ s: code, admin: 1 });
 };
 
-window.archiveShowResults = function(code) {
-  const poll = archiveState.polls.find(p => p.code === code);
+window.archiveShowResults = async function(code) {
+  // Fetch fresh from DB so results are never stale (and stay correct after
+  // the archive list later becomes a lightweight index).
+  let poll = null;
+  try {
+    const snap = await db.ref('polls/' + code).once('value');
+    if (snap.val()) poll = { code, ...migratePoll(snap.val()) };
+  } catch (e) { console.error(e); }
+  if (!poll) poll = archiveState.polls.find(p => p.code === code);
   if (!poll) { showToast('الاستبيان غير موجود', 'error'); return; }
   
   const totalVoters = poll.totalVoters || 0;
@@ -7193,7 +7336,13 @@ window.archiveExport = function(code) {
 
 window.archiveExportDirect = async function(code, type) {
   closeModal();
-  const poll = archiveState.polls.find(p => p.code === code);
+  // Fetch fresh from DB so exports always reflect the latest submissions.
+  let poll = null;
+  try {
+    const snap = await db.ref('polls/' + code).once('value');
+    if (snap.val()) poll = { code, ...migratePoll(snap.val()) };
+  } catch (e) { console.error(e); }
+  if (!poll) poll = archiveState.polls.find(p => p.code === code);
   if (!poll) return;
   // Temporarily set as current poll for export.
   // FIX: exportExcel is async (first line awaits ensureExcelJS ~900KB).
