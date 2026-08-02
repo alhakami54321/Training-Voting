@@ -11308,5 +11308,51 @@ async function exportExcel(mode) {
   };
 })();
 </script>
+
+<script>
+/* === اضافة: اعادة ربط حساب حماية المدرب تلقائيا عند استعادة الجلسة (لتوافق قواعد الحماية المحصنة) === */
+(function(){
+  if (window.__authRebindInstalled) return;
+  window.__authRebindInstalled = true;
+  if (typeof firebase === "undefined" || !firebase.auth) return;
+  var DOMAIN = "@tv-local.app", CRED_KEY = "mu-fbcred", SESS_KEY = "mu-userId";
+  try {
+    var proto = Object.getPrototypeOf(firebase.auth());
+    ["signInWithEmailAndPassword","createUserWithEmailAndPassword"].forEach(function(m){
+      var orig = proto[m];
+      if (typeof orig !== "function" || orig.__wrapped) return;
+      var w = function(email, password){
+        var pr = orig.call(this, email, password);
+        try { if (typeof email === "string" && email.indexOf(DOMAIN) > -1) {
+          pr.then(function(){ try { sessionStorage.setItem(CRED_KEY, JSON.stringify({e:email,p:password})); } catch(e){} }).catch(function(){});
+        }} catch(e){}
+        return pr;
+      };
+      w.__wrapped = true; proto[m] = w;
+    });
+  } catch(e){}
+  function shouldRebind(){
+    try { var p = new URLSearchParams(location.search);
+      if (p.get("admin") === "1") return true;
+      if (p.has("s") || p.has("v")) return false;
+      return true; } catch(e){ return true; }
+  }
+  var busy = false;
+  function rebind(){
+    if (busy || !shouldRebind()) return;
+    var sid, raw;
+    try { sid = sessionStorage.getItem(SESS_KEY); raw = sessionStorage.getItem(CRED_KEY); } catch(e){ return; }
+    if (!sid) { try { sessionStorage.removeItem(CRED_KEY); } catch(e){} return; }
+    if (!raw) return;
+    var c; try { c = JSON.parse(raw); } catch(e){ return; }
+    var cur = firebase.auth().currentUser;
+    if (cur && cur.email === c.e) return;
+    busy = true;
+    firebase.auth().signInWithEmailAndPassword(c.e, c.p).catch(function(){}).then(function(){ busy = false; });
+  }
+  firebase.auth().onAuthStateChanged(function(){ rebind(); });
+  setTimeout(rebind, 1500);
+})();
+</script>
 </body>
 </html>
