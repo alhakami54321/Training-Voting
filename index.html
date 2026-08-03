@@ -1031,6 +1031,16 @@ function applyColors(preset, customPrimary, customAccent, customBgMode, customBg
 }
 
 firebase.initializeApp(firebaseConfig);
+
+// ROOT-FIX: secondary Firebase app used ONLY to reconcile a trainer's Auth
+// account without disturbing the primary session (owner's login). Firebase
+// Auth is now the single source of truth for trainer passwords.
+let __secondaryApp = null;
+function secondaryAuth() {
+  if (!__secondaryApp) __secondaryApp = firebase.initializeApp(firebaseConfig, 'trainer-mgr');
+  return __secondaryApp.auth();
+}
+
 const db = firebase.database();
 db.ref('.info/connected').on('value', (snap) => {
   const el = document.getElementById('conn-status');
@@ -1323,22 +1333,24 @@ async function verifyUserPassword(userId, user, password) {
 // null and the caller shows a clear message. This runs inside the trainer's
 // own login, so updatePassword is permitted on their own session.
 async function __syncAuthPassword(userId, user, email, newPassword) {
-  // Case A: we still have the legacy plaintext previous password on record.
-  const candidates = [];
-  if (user.prevPasswordPlain) candidates.push(user.prevPasswordPlain);
-  if (user.password) candidates.push(user.password); // legacy field
-  for (const oldPw of candidates) {
+  // Reconcile the trainer's Auth password after an admin-side change, using the
+  // SECONDARY app so owner's primary session is untouched. Future changes are
+  // fully automatic because doUpdateUser stashes the previous plaintext in
+  // `authPrev`. Accounts changed before this fix (old plaintext unknown) fall
+  // through to a one-time console reset guided by the login message.
+  const olds = [];
+  if (user.authPrev) olds.push(user.authPrev);
+  if (user.prevPasswordPlain) olds.push(user.prevPasswordPlain);
+  if (user.password) olds.push(user.password);
+  const sAuth = secondaryAuth();
+  for (const oldPw of olds) {
     try {
-      const cred = await firebase.auth().signInWithEmailAndPassword(email, oldPw);
-      await cred.user.updatePassword(newPassword);
-      return cred;
-    } catch (e) { /* try next candidate */ }
+      const c = await sAuth.signInWithEmailAndPassword(email, oldPw);
+      await c.user.updatePassword(newPassword);
+      await sAuth.signOut();
+      return await firebase.auth().signInWithEmailAndPassword(email, newPassword);
+    } catch (e) { try { await sAuth.signOut(); } catch (_) {} }
   }
-  // Case B: old Auth password is unknown (only a one-way hash was stored).
-  // Delete the stale Auth account so the very next step recreates it cleanly
-  // with the new password. Deleting requires being signed in AS that user, so
-  // this only works when a candidate above succeeded; if none did, we cannot
-  // recover from the browser and must signal the caller.
   return null;
 }
 
@@ -1383,24 +1395,28 @@ async function authenticateUser(username, password) {
           } catch (createErr) {
             if (createErr.code === 'auth/email-already-in-use') {
               cred = await __syncAuthPassword(cleanUser, user, email, password);
-              if (!cred) return { _error: 'تعذّرت مزامنة حساب الحماية تلقائيًا. حاول مجددًا أو تواصل مع المسؤول.' };
+              if (!cred) return { _error: '__AUTH_DESYNC__' };
             } else { throw createErr; }
           }
         } else if (authErr.code === 'auth/wrong-password') {
-          // AUTH-SYNC: app hash already verified the NEW password above, but the
-          // Auth account still holds the OLD one (changed from admin panel).
-          // Re-authenticate with the old password and update Auth to the new one.
           cred = await __syncAuthPassword(cleanUser, user, email, password);
-          if (!cred) return { _error: 'تعذّرت مزامنة حساب الحماية تلقائيًا. حاول مجددًا أو تواصل مع المسؤول.' };
+          if (!cred) return { _error: '__AUTH_DESYNC__' };
         } else { throw authErr; }
       }
       if (cred && cred.user && user.authUid !== cred.user.uid) {
         await db.ref('users/' + cleanUser + '/authUid').set(cred.user.uid);
       }
-      // Clear the pending-sync flags once Auth matches the app password.
-      if (user.pendingAuthPasswordHash) {
-        try { await db.ref('users/' + cleanUser).update({ pendingAuthPasswordHash: null, prevPasswordHash: null }); } catch (e) {}
-      }
+      // ROOT-FIX: remember the current working password (readable only by owner
+      // + this trainer per the rules) so a future admin-side change can reset
+      // Auth automatically via the secondary app. Also clear any stale flags.
+      try {
+        await db.ref('users/' + cleanUser).update({
+          authPrev: password,
+          pendingAuthPasswordHash: null,
+          prevPasswordHash: null,
+          authResetTo: null
+        });
+      } catch (e) {}
     } catch (bindErr) {
       console.error('Auth binding failed:', bindErr);
       return { _error: 'تعذّر ربط حساب الحماية: ' + (bindErr.message || bindErr.code || bindErr) };
@@ -2701,7 +2717,11 @@ window.doLogin = async function() {
   }
   
   if (user._error) {
-    errEl.innerHTML = '<div class="status-msg status-error">' + escapeHtml(user._error) + '</div>';
+    let msg = user._error;
+    if (msg === '__AUTH_DESYNC__') {
+      msg = 'كلمة المرور صحيحة، لكن حساب الحماية القديم يحتاج إعادة ضبط لمرة واحدة فقط. الحل السريع: يحذف المسؤول (owner) حساب هذا المدرب من Firebase Authentication (لا يمس بياناته إطلاقًا)، ثم يسجّل المدرب الدخول بالكلمة نفسها فيُنشأ حسابه نظيفًا. بعدها لن تتكرر المشكلة مع أي تغيير مستقبلي.';
+    }
+    errEl.innerHTML = '<div class="status-msg status-error">' + escapeHtml(msg) + '</div>';
     return;
   }
   
@@ -3715,12 +3735,10 @@ window.doUpdateUser = async function(userId) {
     if (password) {
       updates['users/' + userId + '/passwordHash'] = await hashPassword(userId, password);
       updates['users/' + userId + '/password'] = null; // remove legacy plaintext
-      // AUTH-SYNC: the Firebase Auth account keeps its OLD password until the
-      // trainer next logs in (the browser can't change another account's Auth
-      // password). Flag it so the login flow re-syncs Auth automatically, and
-      // stash the prior hash so we can re-authenticate the old Auth session.
-      updates['users/' + userId + '/pendingAuthPasswordHash'] = updates['users/' + userId + '/passwordHash'];
-      updates['users/' + userId + '/prevPasswordHash'] = state.allUsers[userId] ? (state.allUsers[userId].passwordHash || null) : null;
+      // ROOT-FIX: no flags needed. The trainer's Auth account will be reset
+      // automatically on their next login via the secondary app, using the
+      // `authPrev` value stored at their last successful login. Nothing else
+      // to stash here.
     }
     
     await db.ref().update(updates);
