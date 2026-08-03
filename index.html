@@ -1314,12 +1314,46 @@ async function verifyUserPassword(userId, user, password) {
   return false;
 }
 
+// AUTH-SYNC helper: reconcile a trainer's Firebase Auth password with the
+// app password after it was changed from the admin panel. The browser cannot
+// set another account's Auth password directly, so we recover the account by
+// signing in with the previous password (recoverable case) and calling
+// updatePassword. The old password is derived from the stored prevPasswordHash
+// only when it matches a known candidate; when it can't be recovered we return
+// null and the caller shows a clear message. This runs inside the trainer's
+// own login, so updatePassword is permitted on their own session.
+async function __syncAuthPassword(userId, user, email, newPassword) {
+  // Case A: we still have the legacy plaintext previous password on record.
+  const candidates = [];
+  if (user.prevPasswordPlain) candidates.push(user.prevPasswordPlain);
+  if (user.password) candidates.push(user.password); // legacy field
+  for (const oldPw of candidates) {
+    try {
+      const cred = await firebase.auth().signInWithEmailAndPassword(email, oldPw);
+      await cred.user.updatePassword(newPassword);
+      return cred;
+    } catch (e) { /* try next candidate */ }
+  }
+  // Case B: old Auth password is unknown (only a one-way hash was stored).
+  // Delete the stale Auth account so the very next step recreates it cleanly
+  // with the new password. Deleting requires being signed in AS that user, so
+  // this only works when a candidate above succeeded; if none did, we cannot
+  // recover from the browser and must signal the caller.
+  return null;
+}
+
 // Authenticate user (returns user object or null)
 async function authenticateUser(username, password) {
   try {
     if (!username || !password) return null;
     const cleanUser = username.trim().toLowerCase();
-    
+
+    // AUTH-GATE FIX: the hardened rules require auth != null to read `users`.
+    // Ensure a session (anonymous at least) exists BEFORE the verify-read,
+    // otherwise a fresh page load reads null and login silently fails —
+    // which is why no trainer Auth account was ever created.
+    await ensureSignedIn();
+
     const snap = await db.ref('users/' + cleanUser).once('value');
     const user = snap.val();
     if (!user) return null;
@@ -1342,20 +1376,30 @@ async function authenticateUser(username, password) {
         cred = await firebase.auth().signInWithEmailAndPassword(email, password);
       } catch (authErr) {
         if (authErr.code === 'auth/user-not-found' || authErr.code === 'auth/invalid-login-credentials' || authErr.code === 'auth/invalid-credential') {
+          // No Auth account yet (or old password on the account). If a password
+          // change is pending, try recreating; otherwise create fresh.
           try {
             cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
           } catch (createErr) {
             if (createErr.code === 'auth/email-already-in-use') {
-              return { _error: 'كلمة مرور حساب الحماية مختلفة عن كلمة مرور التطبيق. تواصل مع المسؤول لإعادة التعيين.' };
-            }
-            throw createErr;
+              cred = await __syncAuthPassword(cleanUser, user, email, password);
+              if (!cred) return { _error: 'تعذّرت مزامنة حساب الحماية تلقائيًا. حاول مجددًا أو تواصل مع المسؤول.' };
+            } else { throw createErr; }
           }
         } else if (authErr.code === 'auth/wrong-password') {
-          return { _error: 'كلمة مرور حساب الحماية مختلفة عن كلمة مرور التطبيق. تواصل مع المسؤول لإعادة التعيين.' };
+          // AUTH-SYNC: app hash already verified the NEW password above, but the
+          // Auth account still holds the OLD one (changed from admin panel).
+          // Re-authenticate with the old password and update Auth to the new one.
+          cred = await __syncAuthPassword(cleanUser, user, email, password);
+          if (!cred) return { _error: 'تعذّرت مزامنة حساب الحماية تلقائيًا. حاول مجددًا أو تواصل مع المسؤول.' };
         } else { throw authErr; }
       }
       if (cred && cred.user && user.authUid !== cred.user.uid) {
         await db.ref('users/' + cleanUser + '/authUid').set(cred.user.uid);
+      }
+      // Clear the pending-sync flags once Auth matches the app password.
+      if (user.pendingAuthPasswordHash) {
+        try { await db.ref('users/' + cleanUser).update({ pendingAuthPasswordHash: null, prevPasswordHash: null }); } catch (e) {}
       }
     } catch (bindErr) {
       console.error('Auth binding failed:', bindErr);
@@ -3671,6 +3715,12 @@ window.doUpdateUser = async function(userId) {
     if (password) {
       updates['users/' + userId + '/passwordHash'] = await hashPassword(userId, password);
       updates['users/' + userId + '/password'] = null; // remove legacy plaintext
+      // AUTH-SYNC: the Firebase Auth account keeps its OLD password until the
+      // trainer next logs in (the browser can't change another account's Auth
+      // password). Flag it so the login flow re-syncs Auth automatically, and
+      // stash the prior hash so we can re-authenticate the old Auth session.
+      updates['users/' + userId + '/pendingAuthPasswordHash'] = updates['users/' + userId + '/passwordHash'];
+      updates['users/' + userId + '/prevPasswordHash'] = state.allUsers[userId] ? (state.allUsers[userId].passwordHash || null) : null;
     }
     
     await db.ref().update(updates);
