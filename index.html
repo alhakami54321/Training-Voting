@@ -1097,7 +1097,21 @@ function trainerEmail(username) {
 }
 let authUid = null;
 firebase.auth().onAuthStateChanged((u) => { authUid = u ? u.uid : null; });
+let __authRestoreWait = null;
 async function ensureSignedIn() {
+  if (firebase.auth().currentUser) return firebase.auth().currentUser.uid;
+  // ROOT FIX: on page load Firebase restores a persisted (trainer) session
+  // asynchronously. Signing in anonymously before that restore completes
+  // would REPLACE the trainer session. Wait for the first auth event once,
+  // then only fall back to anonymous if no session was restored.
+  if (!__authRestoreWait) {
+    __authRestoreWait = new Promise((resolve) => {
+      const off = firebase.auth().onAuthStateChanged((u) => { off(); resolve(u); });
+      setTimeout(() => resolve(firebase.auth().currentUser), 2500);
+    });
+  }
+  const restored = await __authRestoreWait;
+  if (restored) return restored.uid;
   if (firebase.auth().currentUser) return firebase.auth().currentUser.uid;
   try {
     const cred = await firebase.auth().signInAnonymously();
@@ -7262,15 +7276,46 @@ window.archiveShowResults = async function(code) {
   let questionsHtml = '';
   if (questions.length === 0) {
     questionsHtml = '<div class="results-no-answers">لا توجد أسئلة في هذا الاستبيان</div>';
+  } else if (poll.pollType === 'workshop') {
+    // FIX: workshop questions have no options — the generic bar-chart loop
+    // below crashed on q.options for workshop polls (long-standing bug).
+    // Workshops show each group's textual answers instead.
+    const groups = Object.values(poll.voters || {});
+    questions.forEach((q, qIdx) => {
+      let answersHtml = '';
+      let count = 0;
+      groups.forEach(g => {
+        const raw = g && g.answers ? g.answers[q.id] : undefined;
+        const text = Array.isArray(raw) ? raw.join('، ') : (raw == null ? '' : String(raw));
+        if (!text.trim()) return;
+        count++;
+        const gname = (g.info && (g.info.groupName || g.info.name)) || 'مجموعة بدون اسم';
+        answersHtml += `
+          <div class="result-bar-container">
+            <div class="result-bar-label"><span class="result-bar-name">👥 ${escapeHtml(gname)}</span></div>
+            <div style="white-space:pre-wrap;padding:6px 4px 2px;color:#475569;font-size:0.92rem;line-height:1.7;">${escapeHtml(text)}</div>
+          </div>`;
+      });
+      if (!count) answersHtml = '<div class="results-no-answers">لم تجب أي مجموعة على هذا السؤال</div>';
+      questionsHtml += `
+        <div class="results-question-block">
+          <div class="results-question-block-title">
+            <div class="results-question-num">${qIdx + 1}</div>
+            <div class="results-question-text">${escapeHtml(q.title)}</div>
+          </div>
+          ${answersHtml}
+        </div>`;
+    });
   } else {
     questions.forEach((q, qIdx) => {
-      const qTotal = q.options.reduce((sum, o) => sum + (o.votes || 0), 0);
-      const maxV = Math.max(...q.options.map(o => o.votes || 0), 1);
+      const qOpts = Array.isArray(q.options) ? q.options : [];
+      const qTotal = qOpts.reduce((sum, o) => sum + (o.votes || 0), 0);
+      const maxV = Math.max(...qOpts.map(o => o.votes || 0), 1);
       let optsHtml = '';
       if (qTotal === 0) {
         optsHtml = '<div class="results-no-answers">لم يجب أحد على هذا السؤال</div>';
       } else {
-        q.options.forEach(o => {
+        qOpts.forEach(o => {
           const pct = Math.round(((o.votes || 0) / qTotal) * 100);
           const bw = ((o.votes || 0) / maxV) * 100;
           optsHtml += `
@@ -11310,49 +11355,11 @@ async function exportExcel(mode) {
 </script>
 
 <script>
-/* === اضافة: اعادة ربط حساب حماية المدرب تلقائيا عند استعادة الجلسة (لتوافق قواعد الحماية المحصنة) === */
-(function(){
-  if (window.__authRebindInstalled) return;
-  window.__authRebindInstalled = true;
-  if (typeof firebase === "undefined" || !firebase.auth) return;
-  var DOMAIN = "@tv-local.app", CRED_KEY = "mu-fbcred", SESS_KEY = "mu-userId";
-  try {
-    var proto = Object.getPrototypeOf(firebase.auth());
-    ["signInWithEmailAndPassword","createUserWithEmailAndPassword"].forEach(function(m){
-      var orig = proto[m];
-      if (typeof orig !== "function" || orig.__wrapped) return;
-      var w = function(email, password){
-        var pr = orig.call(this, email, password);
-        try { if (typeof email === "string" && email.indexOf(DOMAIN) > -1) {
-          pr.then(function(){ try { sessionStorage.setItem(CRED_KEY, JSON.stringify({e:email,p:password})); } catch(e){} }).catch(function(){});
-        }} catch(e){}
-        return pr;
-      };
-      w.__wrapped = true; proto[m] = w;
-    });
-  } catch(e){}
-  function shouldRebind(){
-    try { var p = new URLSearchParams(location.search);
-      if (p.get("admin") === "1") return true;
-      if (p.has("s") || p.has("v")) return false;
-      return true; } catch(e){ return true; }
-  }
-  var busy = false;
-  function rebind(){
-    if (busy || !shouldRebind()) return;
-    var sid, raw;
-    try { sid = sessionStorage.getItem(SESS_KEY); raw = sessionStorage.getItem(CRED_KEY); } catch(e){ return; }
-    if (!sid) { try { sessionStorage.removeItem(CRED_KEY); } catch(e){} return; }
-    if (!raw) return;
-    var c; try { c = JSON.parse(raw); } catch(e){ return; }
-    var cur = firebase.auth().currentUser;
-    if (cur && cur.email === c.e) return;
-    busy = true;
-    firebase.auth().signInWithEmailAndPassword(c.e, c.p).catch(function(){}).then(function(){ busy = false; });
-  }
-  firebase.auth().onAuthStateChanged(function(){ rebind(); });
-  setTimeout(rebind, 1500);
-})();
+/* SECURITY: the previous "auto re-bind" block cached trainer passwords in
+   plaintext sessionStorage. Removed — the session-restore race it worked
+   around is now fixed at the root in ensureSignedIn(). This block only
+   purges any credentials that were already cached on users' browsers. */
+(function(){ try { sessionStorage.removeItem("mu-fbcred"); } catch(e){} })();
 </script>
 </body>
 </html>
