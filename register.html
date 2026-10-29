@@ -166,8 +166,7 @@ button.btn[disabled]{opacity:.7;cursor:wait}
     var btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='جارٍ التسجيل…';
     var key = phone.replace(/\D/g,'');
     var ref = db.ref('registrations/'+COURSE+'/'+key);
-    ref.once('value').then(function(snap){
-      if (snap.exists()) { throw { code:'dup', name: snap.val().name }; }
+    Promise.resolve().then(function(){
       var rec = {
         name:name, phone:phone, email:email||null, nationality:val('nationality'), city:val('city'), job:val('job')||null,
         age:val('age')||null, engineer:radio('engineer'), level:radio('level'), mikrotik:val('mikrotik')||null, notes:val('notes')||null,
@@ -182,8 +181,8 @@ button.btn[disabled]{opacity:.7;cursor:wait}
       window.scrollTo({top:0,behavior:'smooth'});
     }).catch(function(e){
       btn.disabled=false; btn.textContent='تأكيد التسجيل المسبق';
-      if (e && e.code==='dup') return show('هذا الرقم مسجّل مسبقاً باسم: '+e.name+' — لا حاجة للتسجيل مرة أخرى.');
       console.error(e);
+      if (e && /PERMISSION_DENIED/i.test(e.code||e.message||'')) return show('هذا الرقم مسجّل مسبقاً — لا حاجة للتسجيل مرة أخرى. إن لم تكن سجّلت من قبل فتواصل مع المدرّب.');
       show('تعذّر إتمام التسجيل الآن ('+((e&&e.code)||'خطأ')+'). حاول مرة أخرى أو تواصل مع المدرّب.');
     });
   });
