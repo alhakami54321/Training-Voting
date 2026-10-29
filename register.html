@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>التسجيل في دورة مبادئ في هندسة الشبكات الحاسوبية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&family=Tajawal:wght@400;500;700&family=Roboto:wght@400;500&display=swap">
+<style>
+:root{--frame:#E4E8EB;--accent:#1890A8;--accent-d:#126F82;--ink:#2E3A44;--muted:#6B7A86;--sand:#FBF0D6;--sand-t:#7A5E12;--soft:#EEF1F4;--line:#DCE2E6;--ok:#1E8F5A;--err:#B3261E}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--frame);color:var(--ink);font-family:'Tajawal','Almarai',sans-serif;font-size:17px;line-height:1.55}
+.lat{font-family:'Roboto','Tajawal',sans-serif;direction:ltr;unicode-bidi:isolate}
+.wrap{max-width:760px;margin:0 auto;padding:24px 16px 48px}
+.card{background:#fff;border-radius:28px;box-shadow:0 10px 0 #CBD3D9,0 26px 56px rgba(46,58,68,.22);padding:28px 24px 30px;position:relative;overflow:hidden}
+.badge{display:inline-block;background:var(--accent);color:#fff;font-family:'Almarai',sans-serif;font-weight:800;font-size:16px;padding:8px 18px 9px;border-radius:999px;box-shadow:0 6px 0 var(--accent-d)}
+h1{margin:14px 0 4px;font-family:'Almarai',sans-serif;font-weight:800;color:var(--accent);line-height:1.15;display:flex;flex-direction:column;align-items:flex-start}
+h1 .s1{font-size:24px}h1 .s2{font-size:36px;text-shadow:4px 5px 0 #BFE4E9}
+.sub{margin:6px 0 0;color:var(--muted);font-size:16px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0 4px}
+.fact{background:var(--soft);border-radius:16px;padding:10px 12px 12px;box-shadow:0 5px 0 #CBD3D9}
+.fact b{display:block;font-family:'Almarai',sans-serif;font-size:18px}
+.fact span{font-size:14px;color:var(--muted)}
+.fact.gold{background:var(--sand);color:var(--sand-t);box-shadow:0 5px 0 #D8C38F}
+.fact.gold span{color:var(--sand-t)}
+h2{font-family:'Almarai',sans-serif;font-weight:800;font-size:20px;margin:26px 0 10px;color:var(--ink)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.grid{grid-template-columns:1fr}}
+.f{display:flex;flex-direction:column;gap:6px}
+.f.full{grid-column:1/-1}
+label{font-weight:700;font-size:15px}
+label .req{color:var(--err)}
+input,select,textarea{font:inherit;color:var(--ink);background:#fff;border:2px solid var(--line);border-radius:14px;padding:12px 14px;min-height:48px;outline:none;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(24,144,168,.15)}
+input[type=tel]{direction:ltr;text-align:left;font-family:'Roboto','Tajawal',sans-serif}
+.hint{font-size:13px;color:var(--muted)}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg label{flex:1 1 auto;min-width:110px;display:flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--line);border-radius:14px;padding:11px 12px;cursor:pointer;font-weight:500;min-height:48px;background:#fff}
+.seg input{width:auto;min-height:0;margin:0;accent-color:var(--accent)}
+.seg label:has(input:checked){border-color:var(--accent);background:#E3F5F7;font-weight:700}
+.agree{display:flex;gap:10px;align-items:flex-start;font-size:15px;margin-top:6px}
+.agree input{width:22px;height:22px;min-height:0;margin-top:2px;accent-color:var(--accent)}
+button.btn{font:inherit;font-family:'Almarai',sans-serif;font-weight:800;font-size:20px;color:#fff;background:var(--accent);border:0;border-radius:18px;padding:14px 24px 16px;width:100%;cursor:pointer;box-shadow:0 8px 0 var(--accent-d),0 18px 30px rgba(24,144,168,.3);margin-top:22px;min-height:56px}
+button.btn:active{transform:translateY(4px);box-shadow:0 4px 0 var(--accent-d)}
+button.btn[disabled]{opacity:.7;cursor:wait}
+.msg{display:none;margin-top:16px;border-radius:16px;padding:14px 16px;font-weight:700}
+.msg.err{display:block;background:#FDE8E6;color:#8A3A34}
+.done{display:none;text-align:center;padding:30px 10px 10px}
+.done .ok{width:84px;height:84px;border-radius:50%;background:#E3F5F7;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.done h2{font-size:26px;color:var(--accent);margin:0 0 8px}
+.done p{margin:6px 0;color:var(--muted)}
+.foot{margin-top:18px;text-align:center;font-size:14px;color:var(--muted)}
+.foot b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <span class="badge">دورة تدريبية مجانية · عن بُعد · 3 أيام</span>
+    <h1><span class="s1">مبادئ في هندسة</span><span class="s2">الشبكات الحاسوبية</span></h1>
+    <p class="sub">من الكابل إلى راوتر MikroTik — وفق منهج MTCNA الرسمي · المدرّب: م. خالد أحمد الحكمي</p>
+    <div class="facts">
+      <div class="fact gold"><b>مجاناً 100%</b><span>بلا رسوم تسجيل</span></div>
+      <div class="fact"><b>3 أيام</b><span>ساعتان ونصف كل ليلة</span></div>
+      <div class="fact"><b>أونلاين</b><span>عبر رابط UniqueDesk</span></div>
+      <div class="fact"><b id="dateFact">[التاريخ]</b><span id="timeFact">[الوقت]</span></div>
+    </div>
+
+    <form id="regForm" novalidate>
+      <h2>نموذج التسجيل المسبق</h2>
+      <div class="grid">
+        <div class="f full"><label for="name">الاسم الثلاثي <span class="req">*</span></label><input id="name" name="name" autocomplete="name" maxlength="80" required placeholder="مثال: محمد أحمد العمري"></div>
+        <div class="f"><label for="phone">رقم الجوال <span class="req">*</span></label><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required placeholder="05xxxxxxxx"><span class="hint">سيصلك عليه رابط الحضور</span></div>
+        <div class="f"><label for="email">البريد الإلكتروني</label><input id="email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" placeholder="اختياري" class="lat" style="text-align:left"></div>
+        <div class="f"><label for="nationality">الجنسية <span class="req">*</span></label>
+          <select id="nationality" name="nationality" required>
+            <option value="">— اختر —</option>
+            <option>سعودي</option><option>يمني</option><option>مصري</option><option>سوداني</option><option>سوري</option><option>أردني</option><option>فلسطيني</option><option>باكستاني</option><option>هندي</option><option>بنغلاديشي</option><option>فلبيني</option><option>إماراتي</option><option>كويتي</option><option>بحريني</option><option>قطري</option><option>عُماني</option><option>عراقي</option><option>لبناني</option><option>مغربي</option><option>جزائري</option><option>تونسي</option><option>ليبي</option><option>موريتاني</option><option>صومالي</option><option>إريتري</option><option>إثيوبي</option><option>نيجيري</option><option>تركي</option><option>إندونيسي</option><option>أفغاني</option><option value="أخرى">أخرى</option>
+          </select></div>
+        <div class="f"><label for="city">المدينة <span class="req">*</span></label><input id="city" name="city" maxlength="60" required placeholder="مثال: جدة"></div>
+        <div class="f"><label for="job">جهة العمل / المسمى الوظيفي</label><input id="job" name="job" maxlength="100" placeholder="اختياري"></div>
+        <div class="f"><label for="age">الفئة العمرية</label>
+          <select id="age" name="age"><option value="">— اختياري —</option><option>أقل من 20</option><option>20 – 29</option><option>30 – 39</option><option>40 – 49</option><option>50 فأكثر</option></select></div>
+
+        <div class="f full"><label>هل أنت مهندس؟ <span class="req">*</span></label>
+          <div class="seg">
+            <label><input type="radio" name="engineer" value="مهندس" required>نعم، مهندس</label>
+            <label><input type="radio" name="engineer" value="فني">فني / تقني</label>
+            <label><input type="radio" name="engineer" value="طالب">طالب</label>
+            <label><input type="radio" name="engineer" value="غير ذلك">غير ذلك</label>
+          </div></div>
+        <div class="f full"><label>مستواك في الشبكات <span class="req">*</span></label>
+          <div class="seg">
+            <label><input type="radio" name="level" value="مبتدئ" required>مبتدئ</label>
+            <label><input type="radio" name="level" value="متوسط">متوسط</label>
+            <label><input type="radio" name="level" value="متقدم">متقدم</label>
+          </div></div>
+        <div class="f full"><label for="mikrotik">هل سبق لك العمل على راوتر MikroTik؟</label>
+          <select id="mikrotik" name="mikrotik"><option value="">— اختياري —</option><option>لم أعمل عليه</option><option>قليلاً</option><option>أعمل عليه باستمرار</option></select></div>
+        <div class="f full"><label for="notes">ما الذي تتمنى تعلّمه من الدورة؟</label><textarea id="notes" name="notes" rows="3" maxlength="400" placeholder="اختياري"></textarea></div>
+        <div class="f full"><label class="agree"><input type="checkbox" id="agree" required> أوافق على استخدام بياناتي للتواصل بخصوص هذه الدورة وإرسال رابط الحضور.</label></div>
+      </div>
+      <div class="msg" id="msg"></div>
+      <button class="btn" type="submit" id="submitBtn">تأكيد التسجيل المسبق</button>
+    </form>
+
+    <div class="done" id="done">
+      <div class="ok"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#1890A8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+      <h2>تم تسجيلك بنجاح</h2>
+      <p>شكراً <b id="doneName"></b> — رقم تسجيلك: <b class="lat" id="doneId"></b></p>
+      <p>سيصلك رابط الحضور عبر UniqueDesk على رقم جوالك قبل موعد الدورة.</p>
+    </div>
+
+    <div class="foot">إعداد وتقديم: <b>م. خالد أحمد الحكمي</b> — MTCNA · MTCRE · MTCTCE · MTCUME · CCNP · Security+</div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script>
+(function(){
+  var COURSE = 'networking-basics-2026';
+  var INFO = { date: '[التاريخ]', time: '[الوقت]' };
+  document.getElementById('dateFact').textContent = INFO.date;
+  document.getElementById('timeFact').textContent = INFO.time;
+
+  firebase.initializeApp({
+    apiKey: "AIzaSyBUmpBONRyZtDavQQ8gjjDbU17-BaPgB9c",
+    authDomain: "training-voting.firebaseapp.com",
+    databaseURL: "https://training-voting-default-rtdb.firebaseio.com",
+    projectId: "training-voting",
+    storageBucket: "training-voting.firebasestorage.app",
+    messagingSenderId: "21567925569",
+    appId: "1:21567925569:web:0d050489c2106a6c9445c0"
+  });
+  var db = firebase.database(), auth = firebase.auth();
+  auth.signInAnonymously().catch(function(e){ console.warn('anon auth', e && e.code); });
+
+  function toEn(s){ return String(s||'').replace(/[٠-٩]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'.indexOf(d);}).replace(/[۰-۹]/g,function(d){return '۰۱۲۳۴۵۶۷۸۹'.indexOf(d);}); }
+  function normPhone(p){
+    p = toEn(p).replace(/[\s\-()]/g,'');
+    if (/^00966/.test(p)) p = '+966' + p.slice(5);
+    if (/^966/.test(p)) p = '+' + p;
+    if (/^05\d{8}$/.test(p)) p = '+966' + p.slice(1);
+    if (/^5\d{8}$/.test(p)) p = '+966' + p;
+    return p;
+  }
+  function show(err){ var m=document.getElementById('msg'); m.className='msg err'; m.textContent=err; m.scrollIntoView({behavior:'smooth',block:'center'}); }
+  function val(id){ return (document.getElementById(id).value||'').trim(); }
+  function radio(n){ var r=document.querySelector('input[name="'+n+'"]:checked'); return r?r.value:''; }
+
+  document.getElementById('regForm').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var m=document.getElementById('msg'); m.className='msg'; m.textContent='';
+    var name=val('name'), phone=normPhone(val('phone')), email=val('email').toLowerCase();
+    if (name.length < 5) return show('اكتب اسمك الثلاثي كاملاً.');
+    if (!/^\+\d{9,15}$/.test(phone)) return show('رقم الجوال غير صحيح — اكتبه بالصيغة 05xxxxxxxx أو +9665xxxxxxxx.');
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return show('البريد الإلكتروني غير صحيح.');
+    if (!val('nationality')) return show('اختر الجنسية.');
+    if (!val('city')) return show('اكتب المدينة.');
+    if (!radio('engineer')) return show('حدّد هل أنت مهندس.');
+    if (!radio('level')) return show('حدّد مستواك في الشبكات.');
+    if (!document.getElementById('agree').checked) return show('يلزم الموافقة على استخدام البيانات للتواصل.');
+
+    var btn=document.getElementById('submitBtn'); btn.disabled=true; btn.textContent='جارٍ التسجيل…';
+    var key = phone.replace(/\D/g,'');
+    var ref = db.ref('registrations/'+COURSE+'/'+key);
+    ref.once('value').then(function(snap){
+      if (snap.exists()) { throw { code:'dup', name: snap.val().name }; }
+      var rec = {
+        name:name, phone:phone, email:email||null, nationality:val('nationality'), city:val('city'), job:val('job')||null,
+        age:val('age')||null, engineer:radio('engineer'), level:radio('level'), mikrotik:val('mikrotik')||null, notes:val('notes')||null,
+        ua:(navigator.userAgent||'').slice(0,160), createdAt: firebase.database.ServerValue.TIMESTAMP
+      };
+      return ref.set(rec);
+    }).then(function(){
+      document.getElementById('regForm').style.display='none';
+      document.getElementById('doneName').textContent=name;
+      document.getElementById('doneId').textContent=key.slice(-6);
+      document.getElementById('done').style.display='block';
+      window.scrollTo({top:0,behavior:'smooth'});
+    }).catch(function(e){
+      btn.disabled=false; btn.textContent='تأكيد التسجيل المسبق';
+      if (e && e.code==='dup') return show('هذا الرقم مسجّل مسبقاً باسم: '+e.name+' — لا حاجة للتسجيل مرة أخرى.');
+      console.error(e);
+      show('تعذّر إتمام التسجيل الآن ('+((e&&e.code)||'خطأ')+'). حاول مرة أخرى أو تواصل مع المدرّب.');
+    });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>المسجّلون في الدورة</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Almarai:wght@700;800&family=Tajawal:wght@400;500;700&family=Roboto:wght@400;500&display=swap">
+<style>
+:root{--frame:#E4E8EB;--accent:#1890A8;--accent-d:#126F82;--ink:#2E3A44;--muted:#6B7A86;--soft:#EEF1F4;--line:#DCE2E6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--frame);color:var(--ink);font-family:'Tajawal',sans-serif;font-size:15px}
+.lat{font-family:'Roboto',sans-serif;direction:ltr;unicode-bidi:isolate}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 14px 40px}
+.card{background:#fff;border-radius:22px;box-shadow:0 8px 0 #CBD3D9,0 20px 44px rgba(46,58,68,.2);padding:20px}
+h1{font-family:'Almarai',sans-serif;font-weight:800;font-size:24px;color:var(--accent);margin:0 0 6px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:12px 0}
+input,select{font:inherit;border:2px solid var(--line);border-radius:12px;padding:10px 12px;min-height:44px;outline:none}
+input:focus,select:focus{border-color:var(--accent)}
+button{font:inherit;font-family:'Almarai',sans-serif;font-weight:800;border:0;border-radius:12px;padding:10px 18px;min-height:44px;cursor:pointer;background:var(--accent);color:#fff;box-shadow:0 5px 0 var(--accent-d)}
+button.ghost{background:var(--soft);color:var(--ink);box-shadow:0 5px 0 #CBD3D9}
+button.danger{background:#FDE8E6;color:#8A3A34;box-shadow:0 5px 0 #E6BDB8;padding:6px 10px;min-height:34px;font-size:13px}
+.stats{display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 14px}
+.stat{background:var(--soft);border-radius:14px;padding:10px 16px;box-shadow:0 4px 0 #CBD3D9}
+.stat b{font-family:'Almarai',sans-serif;font-size:20px;display:block}
+.stat span{font-size:13px;color:var(--muted)}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:1100px}
+th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;vertical-align:top;white-space:nowrap}
+th{background:var(--soft);font-family:'Almarai',sans-serif;position:sticky;top:0}
+td.wrap-td{white-space:normal;max-width:260px}
+#login{max-width:420px;margin:40px auto}
+.err{color:#8A3A34;font-weight:700;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="login">
+    <h1>دخول المدرّب</h1>
+    <p style="color:var(--muted);margin:0 0 12px">نفس اسم المستخدم وكلمة المرور في نظام التصويت.</p>
+    <div class="row" style="flex-direction:column;align-items:stretch">
+      <input id="u" placeholder="اسم المستخدم" autocomplete="username" class="lat" style="text-align:left">
+      <input id="p" type="password" placeholder="كلمة المرور" autocomplete="current-password" class="lat" style="text-align:left">
+      <button id="loginBtn">دخول</button>
+      <div class="err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <div class="card" id="app" style="display:none">
+    <h1>المسجّلون في دورة مبادئ في هندسة الشبكات الحاسوبية</h1>
+    <div class="stats" id="stats"></div>
+    <div class="row">
+      <input id="q" placeholder="بحث بالاسم أو الجوال أو المدينة" style="flex:1 1 240px">
+      <select id="fLevel"><option value="">كل المستويات</option><option>مبتدئ</option><option>متوسط</option><option>متقدم</option></select>
+      <select id="fEng"><option value="">الكل</option><option>مهندس</option><option>فني</option><option>طالب</option><option>غير ذلك</option></select>
+      <button id="xls">تصدير Excel</button>
+      <button class="ghost" id="csvPhones">نسخ أرقام الجوال</button>
+      <button class="ghost" id="logout">خروج</button>
+    </div>
+    <div class="tbl"><table id="t"><thead><tr>
+      <th>#</th><th>الاسم</th><th>الجوال</th><th>البريد</th><th>الجنسية</th><th>المدينة</th><th>الوظيفة</th><th>العمر</th><th>الصفة</th><th>المستوى</th><th>MikroTik</th><th>ما يتمناه</th><th>وقت التسجيل</th><th></th>
+    </tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  var COURSE='networking-basics-2026', DOMAIN='@tv-local.app';
+  firebase.initializeApp({
+    apiKey: "AIzaSyBUmpBONRyZtDavQQ8gjjDbU17-BaPgB9c",
+    authDomain: "training-voting.firebaseapp.com",
+    databaseURL: "https://training-voting-default-rtdb.firebaseio.com",
+    projectId: "training-voting",
+    storageBucket: "training-voting.firebasestorage.app",
+    messagingSenderId: "21567925569",
+    appId: "1:21567925569:web:0d050489c2106a6c9445c0"
+  });
+  var db=firebase.database(), auth=firebase.auth(), rows=[], unsub=null;
+  var $=function(id){return document.getElementById(id)};
+
+  function toEn(s){ return String(s||'').replace(/[٠-٩]/g,function(d){return '٠١٢٣٤٥٦٧٨٩'.indexOf(d);}); }
+  $('loginBtn').onclick=function(){
+    var u=toEn($('u').value.trim().toLowerCase()), p=toEn($('p').value);
+    $('loginErr').textContent='';
+    if(!u||!p) return $('loginErr').textContent='اكتب اسم المستخدم وكلمة المرور.';
+    auth.signInWithEmailAndPassword(u+DOMAIN,p).catch(function(e){
+      $('loginErr').textContent='تعذّر الدخول: '+(e&&e.code||'');
+    });
+  };
+  $('p').addEventListener('keydown',function(e){ if(e.key==='Enter') $('loginBtn').click(); });
+  $('logout').onclick=function(){ auth.signOut(); };
+
+  auth.onAuthStateChanged(function(user){
+    if(user && !user.isAnonymous){ $('login').style.display='none'; $('app').style.display='block'; listen(); }
+    else { $('app').style.display='none'; $('login').style.display='block'; if(unsub){unsub();unsub=null;} }
+  });
+
+  function listen(){
+    var ref=db.ref('registrations/'+COURSE);
+    var h=function(snap){
+      var v=snap.val()||{}; rows=Object.keys(v).map(function(k){var r=v[k];r._key=k;return r;});
+      rows.sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)});
+      render();
+    };
+    ref.on('value',h,function(e){ alert('تعذّر قراءة السجلات: '+(e&&e.code||e)); });
+    unsub=function(){ref.off('value',h)};
+  }
+  function fmt(ts){ if(!ts) return ''; var d=new Date(ts); return d.toLocaleString('ar-SA-u-nu-latn',{timeZone:'Asia/Riyadh',hour12:true,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }
+  function filtered(){
+    var q=$('q').value.trim().toLowerCase(), l=$('fLevel').value, e=$('fEng').value;
+    return rows.filter(function(r){
+      if(l && r.level!==l) return false; if(e && r.engineer!==e) return false;
+      if(!q) return true;
+      return [r.name,r.phone,r.city,r.email,r.job].join(' ').toLowerCase().indexOf(q)>=0;
+    });
+  }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]}); }
+  function render(){
+    var f=filtered(), tb=$('t').tBodies[0]; tb.innerHTML='';
+    f.forEach(function(r,i){
+      var tr=document.createElement('tr');
+      tr.innerHTML='<td>'+(i+1)+'</td><td><b>'+esc(r.name)+'</b></td><td class="lat">'+esc(r.phone)+'</td><td class="lat">'+esc(r.email)+'</td><td>'+esc(r.nationality)+'</td><td>'+esc(r.city)+'</td><td class="wrap-td">'+esc(r.job)+'</td><td>'+esc(r.age)+'</td><td>'+esc(r.engineer)+'</td><td>'+esc(r.level)+'</td><td>'+esc(r.mikrotik)+'</td><td class="wrap-td">'+esc(r.notes)+'</td><td class="lat">'+esc(fmt(r.createdAt))+'</td><td><button class="danger" data-k="'+esc(r._key)+'">حذف</button></td>';
+      tb.appendChild(tr);
+    });
+    var c={}; rows.forEach(function(r){c[r.level]=(c[r.level]||0)+1;});
+    var eng=rows.filter(function(r){return r.engineer==='مهندس'}).length;
+    $('stats').innerHTML='<div class="stat"><b>'+rows.length+'</b><span>إجمالي المسجّلين</span></div><div class="stat"><b>'+eng+'</b><span>مهندسون</span></div><div class="stat"><b>'+(c['مبتدئ']||0)+'</b><span>مبتدئ</span></div><div class="stat"><b>'+(c['متوسط']||0)+'</b><span>متوسط</span></div><div class="stat"><b>'+(c['متقدم']||0)+'</b><span>متقدم</span></div><div class="stat"><b>'+f.length+'</b><span>المعروض بعد التصفية</span></div>';
+  }
+  ['q','fLevel','fEng'].forEach(function(id){ $(id).addEventListener('input',render); });
+  $('t').addEventListener('click',function(e){
+    var b=e.target.closest('button.danger'); if(!b) return;
+    var r=rows.find(function(x){return x._key===b.dataset.k}); if(!r) return;
+    if(!confirm('حذف تسجيل «'+r.name+'»؟')) return;
+    db.ref('registrations/'+COURSE+'/'+b.dataset.k).remove().catch(function(e){alert('تعذّر الحذف: '+(e&&e.code||e))});
+  });
+  $('xls').onclick=function(){
+    var f=filtered();
+    var data=f.map(function(r,i){ return {'#':i+1,'الاسم':r.name,'الجوال':r.phone,'البريد':r.email||'','الجنسية':r.nationality,'المدينة':r.city,'الوظيفة':r.job||'','الفئة العمرية':r.age||'','الصفة':r.engineer,'المستوى':r.level,'MikroTik':r.mikrotik||'','ما يتمناه':r.notes||'','وقت التسجيل':fmt(r.createdAt)}; });
+    var ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:4},{wch:28},{wch:16},{wch:26},{wch:12},{wch:12},{wch:24},{wch:12},{wch:10},{wch:10},{wch:16},{wch:40},{wch:20}];
+    if(!ws['!views']) ws['!views']=[{RTL:true}];
+    var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'المسجّلون');
+    XLSX.writeFile(wb,'المسجلون-دورة-الشبكات.xlsx');
+  };
+  $('csvPhones').onclick=function(){
+    var t=filtered().map(function(r){return r.phone}).join('\n');
+    navigator.clipboard.writeText(t).then(function(){ alert('نُسخت '+filtered().length+' أرقام.'); });
+  };
+})();
+</script>
+</body>
+</html>
