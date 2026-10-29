@@ -49,7 +49,7 @@ td.wrap-td{white-space:normal;max-width:260px}
     <h1>المسجّلون في دورة مبادئ في هندسة الشبكات الحاسوبية</h1>
     <div class="stats" id="stats"></div>
     <div class="row">
-      <input id="q" placeholder="بحث بالاسم أو الجوال أو المدينة" style="flex:1 1 240px">
+      <input id="q" placeholder="بحث بالاسم أو الهوية أو الجوال أو المدينة" style="flex:1 1 240px">
       <select id="fLevel"><option value="">كل المستويات</option><option>مبتدئ</option><option>متوسط</option><option>متقدم</option></select>
       <select id="fEng"><option value="">الكل</option><option>مهندس</option><option>فني</option><option>طالب</option><option>غير ذلك</option></select>
       <button id="xls">تصدير Excel</button>
@@ -57,7 +57,7 @@ td.wrap-td{white-space:normal;max-width:260px}
       <button class="ghost" id="logout">خروج</button>
     </div>
     <div class="tbl"><table id="t"><thead><tr>
-      <th>#</th><th>الاسم</th><th>الجوال</th><th>البريد</th><th>الجنسية</th><th>المدينة</th><th>الوظيفة</th><th>العمر</th><th>الصفة</th><th>المستوى</th><th>MikroTik</th><th>ما يتمناه</th><th>وقت التسجيل</th><th></th>
+      <th>#</th><th>الاسم</th><th>الهوية</th><th>الجوال</th><th>البريد</th><th>الجنسية</th><th>المدينة</th><th>الوظيفة</th><th>العمر</th><th>الصفة</th><th>المستوى</th><th>MikroTik</th><th>ما يتمناه</th><th>وقت التسجيل</th><th></th>
     </tr></thead><tbody></tbody></table></div>
   </div>
 </div>
@@ -114,7 +114,7 @@ td.wrap-td{white-space:normal;max-width:260px}
     return rows.filter(function(r){
       if(l && r.level!==l) return false; if(e && r.engineer!==e) return false;
       if(!q) return true;
-      return [r.name,r.phone,r.city,r.email,r.job].join(' ').toLowerCase().indexOf(q)>=0;
+      return [r.name,r.nid,r.phone,r.city,r.email,r.job].join(' ').toLowerCase().indexOf(q)>=0;
     });
   }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]}); }
@@ -122,7 +122,7 @@ td.wrap-td{white-space:normal;max-width:260px}
     var f=filtered(), tb=$('t').tBodies[0]; tb.innerHTML='';
     f.forEach(function(r,i){
       var tr=document.createElement('tr');
-      tr.innerHTML='<td>'+(i+1)+'</td><td><b>'+esc(r.name)+'</b></td><td class="lat">'+esc(r.phone)+'</td><td class="lat">'+esc(r.email)+'</td><td>'+esc(r.nationality)+'</td><td>'+esc(r.city)+'</td><td class="wrap-td">'+esc(r.job)+'</td><td>'+esc(r.age)+'</td><td>'+esc(r.engineer)+'</td><td>'+esc(r.level)+'</td><td>'+esc(r.mikrotik)+'</td><td class="wrap-td">'+esc(r.notes)+'</td><td class="lat">'+esc(fmt(r.createdAt))+'</td><td><button class="danger" data-k="'+esc(r._key)+'">حذف</button></td>';
+      tr.innerHTML='<td>'+(i+1)+'</td><td><b>'+esc(r.name)+'</b></td><td class="lat">'+esc(r.nid)+'</td><td class="lat">'+esc(r.phone)+'</td><td class="lat">'+esc(r.email)+'</td><td>'+esc(r.nationality)+'</td><td>'+esc(r.city)+'</td><td class="wrap-td">'+esc(r.job)+'</td><td>'+esc(r.age)+'</td><td>'+esc(r.engineer)+'</td><td>'+esc(r.level)+'</td><td>'+esc(r.mikrotik)+'</td><td class="wrap-td">'+esc(r.notes)+'</td><td class="lat">'+esc(fmt(r.createdAt))+'</td><td><button class="danger" data-k="'+esc(r._key)+'">حذف</button></td>';
       tb.appendChild(tr);
     });
     var c={}; rows.forEach(function(r){c[r.level]=(c[r.level]||0)+1;});
@@ -138,8 +138,8 @@ td.wrap-td{white-space:normal;max-width:260px}
   });
   $('xls').onclick=function(){
     var f=filtered();
-    var data=f.map(function(r,i){ return {'#':i+1,'الاسم':r.name,'الجوال':r.phone,'البريد':r.email||'','الجنسية':r.nationality,'المدينة':r.city,'الوظيفة':r.job||'','الفئة العمرية':r.age||'','الصفة':r.engineer,'المستوى':r.level,'MikroTik':r.mikrotik||'','ما يتمناه':r.notes||'','وقت التسجيل':fmt(r.createdAt)}; });
-    var ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:4},{wch:28},{wch:16},{wch:26},{wch:12},{wch:12},{wch:24},{wch:12},{wch:10},{wch:10},{wch:16},{wch:40},{wch:20}];
+    var data=f.map(function(r,i){ return {'#':i+1,'الاسم':r.name,'الهوية الوطنية':r.nid||'','الجوال':r.phone,'البريد':r.email||'','الجنسية':r.nationality,'المدينة':r.city,'الوظيفة':r.job||'','الفئة العمرية':r.age||'','الصفة':r.engineer,'المستوى':r.level,'MikroTik':r.mikrotik||'','ما يتمناه':r.notes||'','وقت التسجيل':fmt(r.createdAt)}; });
+    var ws=XLSX.utils.json_to_sheet(data); ws['!cols']=[{wch:4},{wch:28},{wch:14},{wch:16},{wch:26},{wch:12},{wch:12},{wch:24},{wch:12},{wch:10},{wch:10},{wch:16},{wch:40},{wch:20}];
     if(!ws['!views']) ws['!views']=[{RTL:true}];
     var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'المسجّلون');
     XLSX.writeFile(wb,'المسجلون-دورة-الشبكات.xlsx');

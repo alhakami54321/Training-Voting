@@ -69,7 +69,8 @@ button.btn[disabled]{opacity:.7;cursor:wait}
     <form id="regForm" novalidate>
       <h2>نموذج التسجيل المسبق</h2>
       <div class="grid">
-        <div class="f full"><label for="name">الاسم الثلاثي <span class="req">*</span></label><input id="name" name="name" autocomplete="name" maxlength="80" required placeholder="مثال: محمد أحمد العمري"></div>
+        <div class="f"><label for="name">الاسم الثلاثي <span class="req">*</span></label><input id="name" name="name" autocomplete="name" maxlength="80" required placeholder="مثال: محمد أحمد العمري"></div>
+        <div class="f"><label for="nid">رقم الهوية الوطنية / الإقامة <span class="req">*</span></label><input id="nid" name="nid" type="text" inputmode="numeric" maxlength="12" required placeholder="10 أرقام" class="lat" style="text-align:left; font-family:'Roboto','Tajawal',sans-serif"><span class="hint">يُستخدم لإصدار شهادة الحضور باسمك الصحيح</span></div>
         <div class="f"><label for="phone">رقم الجوال <span class="req">*</span></label><input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" required placeholder="05xxxxxxxx"><span class="hint">سيصلك عليه رابط الحضور</span></div>
         <div class="f"><label for="email">البريد الإلكتروني</label><input id="email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="120" placeholder="اختياري" class="lat" style="text-align:left"></div>
         <div class="f"><label for="nationality">الجنسية <span class="req">*</span></label>
@@ -153,8 +154,9 @@ button.btn[disabled]{opacity:.7;cursor:wait}
   document.getElementById('regForm').addEventListener('submit', function(ev){
     ev.preventDefault();
     var m=document.getElementById('msg'); m.className='msg'; m.textContent='';
-    var name=val('name'), phone=normPhone(val('phone')), email=val('email').toLowerCase();
+    var name=val('name'), phone=normPhone(val('phone')), email=val('email').toLowerCase(), nid=toEn(val('nid')).replace(/\D/g,'');
     if (name.length < 5) return show('اكتب اسمك الثلاثي كاملاً.');
+    if (!/^[12]\d{9}$/.test(nid)) return show('رقم الهوية الوطنية أو الإقامة غير صحيح — 10 أرقام تبدأ بـ 1 أو 2.');
     if (!/^\+\d{9,15}$/.test(phone)) return show('رقم الجوال غير صحيح — اكتبه بالصيغة 05xxxxxxxx أو +9665xxxxxxxx.');
     if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return show('البريد الإلكتروني غير صحيح.');
     if (!val('nationality')) return show('اختر الجنسية.');
@@ -168,7 +170,7 @@ button.btn[disabled]{opacity:.7;cursor:wait}
     var ref = db.ref('registrations/'+COURSE+'/'+key);
     Promise.resolve().then(function(){
       var rec = {
-        name:name, phone:phone, email:email||null, nationality:val('nationality'), city:val('city'), job:val('job')||null,
+        name:name, nid:nid, phone:phone, email:email||null, nationality:val('nationality'), city:val('city'), job:val('job')||null,
         age:val('age')||null, engineer:radio('engineer'), level:radio('level'), mikrotik:val('mikrotik')||null, notes:val('notes')||null,
         ua:(navigator.userAgent||'').slice(0,160), createdAt: firebase.database.ServerValue.TIMESTAMP
       };
